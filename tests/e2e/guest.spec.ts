@@ -6,7 +6,7 @@ test("complete predefined guest lifecycle, consent, messaging, persistence and d
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("/");
   await expect(
-    page.getByRole("heading", { name: "Stop swiping. Start connecting." }),
+    page.getByRole("heading", { name: "Stop swiping. Start something real." }),
   ).toBeVisible();
   await page.screenshot({
     path: `artifacts/${testInfo.project.name}-landing.png`,

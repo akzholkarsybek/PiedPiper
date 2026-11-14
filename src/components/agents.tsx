@@ -3,16 +3,20 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
-  ArrowLeftRight,
-  ArrowRight,
+  ArrowLeft,
   ArrowUpRight,
   BadgeCheck,
   CalendarHeart,
   Check,
   CircleDashed,
+  CircleHelp,
   Heart,
+  Layers,
   LoaderCircle,
+  MapPin,
+  MessageCircleQuestion,
   MessagesSquare,
+  Mountain,
   RefreshCw,
   Scale,
   ShieldCheck,
@@ -32,7 +36,12 @@ import {
 } from "./ai-status";
 import { dispatchDemo, matched, useDemo } from "@/lib/demo-store";
 import { eligibility, recommend } from "@/lib/matching";
-import { attributeLabel, dimensionLabels, type Profile } from "@/lib/profile";
+import {
+  attributeLabel,
+  dimensionLabels,
+  title,
+  type Profile,
+} from "@/lib/profile";
 import {
   agentEventSchema,
   buildApprovedContext,
@@ -97,21 +106,34 @@ export function AgentConversations({ initialId }: { initialId?: string }) {
     listed[0];
   return (
     <AppShell>
-      <div className="page-heading">
+      <div className="page-heading ag-heading">
         <div>
-          <span className="eyebrow">TWO MATCHMAKERS. ONE GOOD QUESTION.</span>
+          <span className="eyebrow">
+            <span className="eyebrow-star" aria-hidden="true">
+              ✳
+            </span>
+            Agent conversations
+          </span>
           <h1>
-            Let our AIs <em>talk.</em>
+            Let the matchmakers <em>investigate.</em>
           </h1>
           <p>
-            Your matchmaker and theirs compare approved facts, so you start with
-            what matters.
+            Your AI matchmaker and theirs have a short, consent-based
+            conversation about approved facts, so you start with what matters.
           </p>
         </div>
-        <span className="badge sage">
-          <ShieldCheck size={13} />
-          FICTIONAL PROFILES ONLY
-        </span>
+        {peer && (
+          <div className="ag-bounded">
+            <span>
+              <ShieldCheck size={15} /> Bounded investigation
+            </span>
+            <strong>
+              {profile.name} <span aria-hidden="true">↔</span>
+              <span className="sr-only">and</span> {peer.name}
+            </strong>
+            <small>Fictional profiles only</small>
+          </div>
+        )}
       </div>
       {!peer ? (
         <div className="empty-state">
@@ -123,14 +145,13 @@ export function AgentConversations({ initialId }: { initialId?: string }) {
           </p>
           <Button asChild>
             <Link href="/discover">
-              See your introductions <ArrowRight size={16} />
+              See your introductions <ArrowUpRight size={16} />
             </Link>
           </Button>
         </div>
       ) : (
-        <div className="agents-layout">
-          <aside className="agent-list" aria-label="Introductions">
-            <h2>Introductions</h2>
+        <>
+          <nav className="ag-picker" aria-label="Introductions">
             {listed.map((p) => {
               const s = state.agentSessions[p.id];
               return (
@@ -140,9 +161,9 @@ export function AgentConversations({ initialId }: { initialId?: string }) {
                   aria-current={peer.id === p.id}
                   onClick={() => setSelected(p.id)}
                 >
-                  <div className="avatar-portrait">
-                    <Portrait id={p.id} />
-                  </div>
+                  <span className="ag-picker-photo">
+                    <Portrait id={p.id} gender={p.gender} age={p.age} />
+                  </span>
                   <span>
                     <strong>{p.name}</strong>
                     <small>
@@ -158,7 +179,7 @@ export function AgentConversations({ initialId }: { initialId?: string }) {
                 </button>
               );
             })}
-          </aside>
+          </nav>
           <AgentTheater
             key={peer.id}
             profile={profile}
@@ -168,7 +189,7 @@ export function AgentConversations({ initialId }: { initialId?: string }) {
             decision={state.decisions[peer.id]}
             isMatched={matched(state, peer.id)}
           />
-        </div>
+        </>
       )}
     </AppShell>
   );
@@ -409,174 +430,291 @@ function AgentTheater({
       : `Piper for ${names[other(topic.asker)]} is checking ${names[other(topic.asker)]}’s approved profile…`;
   })();
 
+  const answeredRounds = view
+    ? view.turns.filter((t) => t.role === "answer").length
+    : 0;
+  const openUnknown =
+    view?.summary && !running && recommendation
+      ? view.summary.unknowns.find((u) => !handled[u.key])
+      : undefined;
+  const sourceChip = !view ? (
+    <span className="status-chip is-unknown">Not started</span>
+  ) : view.status === "error" ? (
+    <span className="status-chip is-error">
+      <X size={12} /> Interrupted
+    </span>
+  ) : running ? (
+    <span className="status-chip is-live">
+      <LoaderCircle size={12} className="spin" /> In conversation
+    </span>
+  ) : view.source === "gemini" ? (
+    <span className="status-chip is-live">
+      <Sparkles size={12} /> Live Gemini · {answeredRounds} round
+      {answeredRounds === 1 ? "" : "s"}
+    </span>
+  ) : (
+    <span className="status-chip is-scripted">
+      Scripted · {answeredRounds} round{answeredRounds === 1 ? "" : "s"}
+    </span>
+  );
+
   return (
     <section
       className="agent-theater"
       aria-label={`Matchmakers for you and ${peer.name}`}
     >
-      <header className="agent-duo">
-        <AgentCard name={profile.name} portrait={portraitFor(profile)} you />
-        <div className={`agent-link ${running ? "active" : ""}`}>
-          <ArrowLeftRight size={18} />
-          <span>
-            {running
-              ? "In conversation"
-              : view
-                ? `${view.turns.filter((t) => t.role === "answer").length} round${view.turns.filter((t) => t.role === "answer").length === 1 ? "" : "s"}`
-                : `${DEFAULT_ROUNDS}–${MAX_ROUNDS} rounds`}
-          </span>
+      <header className="ag-people">
+        <PersonCard person={profile} portrait={portraitFor(profile)} you />
+        <div
+          className={`ag-link ${running ? "active" : ""}`}
+          aria-hidden="true"
+        >
+          <Sparkles size={20} />
         </div>
-        <AgentCard name={peer.name} portrait={peer.id} />
+        <PersonCard person={peer} portrait={peer.id} />
       </header>
-      {view && <Progress view={view} />}
-      {!view && (
-        <div className="agent-intro">
-          <PiperMark />
-          <h2>
-            Shall our matchmakers <em>compare notes?</em>
-          </h2>
-          <ul>
-            <li>
-              <Check size={14} /> Each matchmaker only sees its own person’s
-              approved profile. Preferences, dealbreakers and interviews stay
-              private.
-            </li>
-            <li>
-              <Check size={14} /> {DEFAULT_ROUNDS} question-and-answer rounds, a{" "}
-              {MAX_ROUNDS === 3 ? "third" : "further"} only for an important
-              open question. No scores, no predictions.
-            </li>
-            <li>
-              <Check size={14} /> Every confirmed fact is checked against
-              approved data. Unknowns stay unknown until someone chooses to
-              share.
-            </li>
-          </ul>
-          {!eligible && (
-            <p className="error-text" role="alert">
-              This introduction no longer meets both people’s requirements, so
-              the matchmakers won’t investigate it.
-            </p>
-          )}
-          <label className="check-label">
-            <input
-              type="checkbox"
-              checked={consent}
-              onChange={(e) => setConsent(e.target.checked)}
-            />
-            Send these fictional profiles’ approved facts to Gemini for this
-            conversation.
-          </label>
-          <div className="ai-mode-row">
-            <AIModeBadge mode="live" status={status} />
+
+      <div className="ag-grid">
+        <div className="ag-convo">
+          <div className="ag-panel-head">
+            <span className="ag-panel-icon">
+              <MessagesSquare size={20} />
+            </span>
+            <h2>Agent conversation</h2>
+            {sourceChip}
           </div>
-          {liveUnavailable(status) && (
-            <p className="muted" role="status">
-              Live AI can’t run right now, so nothing will be sent to Gemini.
-              The scripted demonstration shows the same flow, clearly labeled.
-            </p>
-          )}
-          <div className="inline-actions">
-            <Button
-              disabled={!consent || !eligible || liveUnavailable(status)}
-              onClick={() => start("gemini")}
-            >
-              <Sparkles size={16} /> Let our AIs talk
-            </Button>
-            <Button
-              variant="outline"
-              disabled={!eligible}
-              onClick={() => start("scripted")}
-            >
-              Play the scripted demonstration
-            </Button>
-          </div>
-          <small>
-            The scripted demonstration uses templates, never calls AI, and is
-            labeled as scripted throughout.
-          </small>
-        </div>
-      )}
-      {view && (
-        <>
-          <div className={`source-banner ${view.source}`}>
-            {view.source === "gemini" ? (
-              <>
-                <Sparkles size={14} />
-                LIVE GEMINI CONVERSATION · two separate agent contexts · facts
-                verified before display
-              </>
-            ) : (
-              <>
-                <PiperMark />
-                PREDEFINED DEMONSTRATION · SCRIPTED · NOT AI-GENERATED
-              </>
-            )}
-          </div>
-          <div className="agent-transcript" aria-live="polite">
-            <AnimatePresence initial={false}>
-              {view.turns.map((t) => (
-                <TurnBubble
-                  key={t.id}
-                  turn={t}
-                  names={names}
-                  topic={view.topics.find((x) => x.id === t.topicId)}
-                  factMap={factMap}
-                  source={view.source}
+          {view && <Progress view={view} />}
+          {!view && (
+            <div className="agent-intro">
+              <h3>
+                Shall our matchmakers <em>compare notes?</em>
+              </h3>
+              <ul>
+                <li>
+                  <Check size={15} /> Each matchmaker only sees its own person’s
+                  approved profile. Preferences, dealbreakers and interviews
+                  stay private.
+                </li>
+                <li>
+                  <Check size={15} /> {DEFAULT_ROUNDS} question-and-answer
+                  rounds, a {MAX_ROUNDS === 3 ? "third" : "further"} only for an
+                  important open question. No scores, no predictions.
+                </li>
+                <li>
+                  <Check size={15} /> Every confirmed fact is checked against
+                  approved data. Unknowns stay unknown until someone chooses to
+                  share.
+                </li>
+              </ul>
+              {!eligible && (
+                <p className="error-text" role="alert">
+                  This introduction no longer meets both people’s requirements,
+                  so the matchmakers won’t investigate it.
+                </p>
+              )}
+              <label className="check-label">
+                <input
+                  type="checkbox"
+                  checked={consent}
+                  onChange={(e) => setConsent(e.target.checked)}
                 />
-              ))}
-            </AnimatePresence>
-            {nextTurn && (
-              <div className="agent-typing" role="status">
-                <LoaderCircle className="spin" size={15} /> {nextTurn}
+                Send these fictional profiles’ approved facts to Gemini for this
+                conversation.
+              </label>
+              <div className="ai-mode-row">
+                <AIModeBadge mode="live" status={status} />
               </div>
-            )}
-          </div>
-          {view.error && (
-            <div className="notice error-notice" role="alert">
-              <div>
-                <strong>The matchmakers couldn’t finish.</strong>
-                <p>{view.error}</p>
-                <div className="inline-actions">
+              {liveUnavailable(status) && (
+                <p className="muted" role="status">
+                  Live AI can’t run right now, so nothing will be sent to
+                  Gemini. The scripted demonstration shows the same flow,
+                  clearly labeled.
+                </p>
+              )}
+              <div className="inline-actions">
+                <Button
+                  disabled={!consent || !eligible || liveUnavailable(status)}
+                  onClick={() => start("gemini")}
+                >
+                  <Sparkles size={16} /> Let our AIs talk
+                </Button>
+                <Button
+                  variant="outline"
+                  disabled={!eligible}
+                  onClick={() => start("scripted")}
+                >
+                  Play the scripted demonstration
+                </Button>
+              </div>
+              <small>
+                The scripted demonstration uses templates, never calls AI, and
+                is labeled as scripted throughout.
+              </small>
+            </div>
+          )}
+          {view && (
+            <>
+              <div className={`source-banner ${view.source}`}>
+                {view.source === "gemini" ? (
+                  <>
+                    <Sparkles size={14} />
+                    LIVE GEMINI CONVERSATION · two separate agent contexts ·
+                    facts verified before display
+                  </>
+                ) : (
+                  <>
+                    <PiperMark />
+                    PREDEFINED DEMONSTRATION · SCRIPTED · NOT AI-GENERATED
+                  </>
+                )}
+              </div>
+              <div className="agent-transcript" aria-live="polite">
+                <AnimatePresence initial={false}>
+                  {view.turns.map((t) => (
+                    <TurnBubble
+                      key={t.id}
+                      turn={t}
+                      names={names}
+                      topic={view.topics.find((x) => x.id === t.topicId)}
+                      factMap={factMap}
+                      source={view.source}
+                    />
+                  ))}
+                </AnimatePresence>
+                {nextTurn && (
+                  <div className="agent-typing" role="status">
+                    <span className="ag-dots" aria-hidden="true">
+                      <i />
+                      <i />
+                      <i />
+                    </span>
+                    {nextTurn}
+                  </div>
+                )}
+              </div>
+              {view.error && (
+                <div className="notice error-notice" role="alert">
+                  <div>
+                    <strong>The matchmakers couldn’t finish.</strong>
+                    <p>{view.error}</p>
+                    <div className="inline-actions">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => start("scripted")}
+                      >
+                        Play the scripted demonstration instead
+                      </Button>
+                      {consent && !liveUnavailable(status) && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => start("gemini")}
+                        >
+                          Retry Gemini
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+              {!view.error && view.notice && !running && (
+                <div className="provider-notice agent-notice" role="status">
+                  {view.notice}
+                </div>
+              )}
+              {!running && (
+                <div className="agent-rerun">
+                  <span>Run it again</span>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={!eligible}
+                    onClick={() => start("scripted")}
+                  >
+                    Scripted demonstration
+                  </Button>
+                  <label className="check-label">
+                    <input
+                      type="checkbox"
+                      checked={consent}
+                      onChange={(e) => setConsent(e.target.checked)}
+                    />
+                    Send approved fictional facts to Gemini
+                  </label>
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => start("scripted")}
+                    disabled={!consent || !eligible || liveUnavailable(status)}
+                    onClick={() => start("gemini", false)}
                   >
-                    Play the scripted demonstration instead
+                    <Sparkles size={14} /> Live with Gemini
                   </Button>
-                  {consent && !liveUnavailable(status) && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => start("gemini")}
-                    >
-                      Retry Gemini
-                    </Button>
-                  )}
                 </div>
-              </div>
+              )}
+            </>
+          )}
+        </div>
+
+        <aside className="ag-summary" aria-label="Investigation summary">
+          <div className="ag-panel-head">
+            <span className="ag-panel-icon sage">
+              <Layers size={20} />
+            </span>
+            <h2>Investigation summary</h2>
+          </div>
+          {view?.summary && !running ? (
+            <SummaryPanel
+              summary={view.summary}
+              factMap={factMap}
+              names={names}
+              peer={peer}
+              profile={profile}
+              handled={handled}
+              isMatched={isMatched}
+              canAsk={!!recommendation}
+              onAsk={setAsking}
+            />
+          ) : running ? (
+            <div className="ag-summary-wait" role="status">
+              <div className="skeleton" />
+              <div className="skeleton" />
+              <div className="skeleton short" />
+              <p>
+                The summary is assembled from verified facts after the last
+                round, with no extra AI call.
+              </p>
+            </div>
+          ) : (
+            <div className="ag-summary-empty">
+              <CircleDashed size={26} />
+              <p>
+                When the matchmakers finish, you’ll see confirmed common ground,
+                possible differences, what’s still unknown and an
+                evidence-backed recommendation.
+              </p>
             </div>
           )}
-          {!view.error && view.notice && !running && (
-            <div className="provider-notice agent-notice" role="status">
-              {view.notice}
-            </div>
-          )}
-        </>
-      )}
-      {view?.summary && !running && (
-        <SummaryPanel
-          summary={view.summary}
-          factMap={factMap}
-          names={names}
-          peer={peer}
-          profile={profile}
-          handled={handled}
-          isMatched={isMatched}
-          canAsk={!!recommendation}
-          onAsk={setAsking}
-        />
+        </aside>
+      </div>
+
+      {openUnknown && (
+        <div className="ag-followup">
+          <span className="ag-followup-icon">
+            <MessageCircleQuestion size={28} />
+          </span>
+          <div>
+            <h3>Ask a consent-based follow-up question.</h3>
+            <p>
+              {openUnknown.subjectSide === "b"
+                ? `Check in with ${peer.name} about ${dimensionLabels[openUnknown.dimension].toLowerCase()}, only with their permission, to complete the picture.`
+                : `You haven’t shared your ${dimensionLabels[openUnknown.dimension].toLowerCase()} yet. Answer only if you’re comfortable.`}
+            </p>
+          </div>
+          <Button variant="outline" onClick={() => setAsking(openUnknown.key)}>
+            <CircleHelp size={17} /> Ask follow-up question
+          </Button>
+        </div>
       )}
       {stale && (
         <div className="notice sage-notice stale-notice">
@@ -604,35 +742,6 @@ function AgentTheater({
           {actionError}
         </p>
       )}
-      {view && !running && (
-        <div className="agent-rerun">
-          <span>Run it again</span>
-          <Button
-            size="sm"
-            variant="ghost"
-            disabled={!eligible}
-            onClick={() => start("scripted")}
-          >
-            Scripted demonstration
-          </Button>
-          <label className="check-label">
-            <input
-              type="checkbox"
-              checked={consent}
-              onChange={(e) => setConsent(e.target.checked)}
-            />
-            Send approved fictional facts to Gemini
-          </label>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={!consent || !eligible || liveUnavailable(status)}
-            onClick={() => start("gemini", false)}
-          >
-            <Sparkles size={14} /> Live with Gemini
-          </Button>
-        </div>
-      )}
       {view?.summary && !running && (
         <NextSteps
           peer={peer}
@@ -642,6 +751,13 @@ function AgentTheater({
           isMatched={isMatched}
           onError={setActionError}
         />
+      )}
+      {!(view?.summary && !running) && (
+        <div className="ag-back">
+          <Link href="/discover" className="button button-outline">
+            <ArrowLeft size={16} /> Back to Discover
+          </Link>
+        </div>
       )}
       {asking && recommendation && (
         <InvestigationModal
@@ -660,28 +776,51 @@ function AgentTheater({
   );
 }
 
-function AgentCard({
-  name,
+function PersonCard({
+  person,
   portrait,
   you = false,
 }: {
-  name: string;
+  person: Profile;
   portrait: string;
   you?: boolean;
 }) {
   return (
-    <div className={`agent-card ${you ? "side-a" : "side-b"}`}>
-      <div className="agent-avatar">
-        <Portrait id={portrait} />
-        <span className="agent-chip">
-          <PiperMark />
-        </span>
+    <div className={`ag-person ${you ? "side-a" : "side-b"}`}>
+      <div className="ag-person-photo">
+        <Portrait id={portrait} gender={person.gender} age={person.age} />
       </div>
-      <div>
-        <strong>Piper for {name}</strong>
-        <small>
-          {you ? "Your matchmaker" : `${name}’s matchmaker`} · fictional
-        </small>
+      <div className="ag-person-body">
+        <strong className="ag-person-name">
+          {person.name}
+          {person.age ? `, ${person.age}` : ""}
+          {you && <span className="ag-you">You</span>}
+        </strong>
+        <ul>
+          {person.interests.length > 0 && (
+            <li>
+              <Mountain size={15} />
+              Enjoys {person.interests.slice(0, 3).join(", ")}
+            </li>
+          )}
+          {person.intent && (
+            <li>
+              <Heart size={15} />
+              Looking for {title(person.intent).toLowerCase()}
+            </li>
+          )}
+          {person.city && (
+            <li>
+              <MapPin size={15} />
+              {person.city}
+            </li>
+          )}
+        </ul>
+        <span className="ag-agent-chip">
+          <PiperMark />
+          <span>Piper for {person.name}</span>
+          <small>{you ? "· your matchmaker" : "· their matchmaker"}</small>
+        </span>
       </div>
     </div>
   );
@@ -774,45 +913,54 @@ function TurnBubble({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
-      <span className="agent-turn-meta">
-        PIPER FOR {names[turn.side].toUpperCase()} ·{" "}
-        {turn.role === "question" ? "ASKS" : "ANSWERS"} · ROUND {turn.round}
-        {topic ? ` · ${topic.label.toUpperCase()}` : ""}
-        <em>
-          {source === "scripted"
-            ? "SCRIPTED"
-            : turn.answeredBy === "rule"
-              ? "RULE · NO AI CALL"
-              : "GEMINI"}
-        </em>
+      <span className="ag-turn-avatar" aria-hidden="true">
+        <PiperMark />
       </span>
-      <p>{turn.text}</p>
-      {turn.role === "answer" && (
-        <span className={`turn-status ${turn.status}`}>
-          {turn.status === "confirmed" ? (
-            <>
-              <BadgeCheck size={12} /> Confirmed from approved profile
-            </>
-          ) : (
-            <>
-              <CircleDashed size={12} /> Unknown · not shared yet
-            </>
-          )}
+      <div className="ag-turn-body">
+        <span className="agent-turn-meta">
+          <strong>{names[turn.side]}’s AI</strong>
+          <span>
+            {turn.role === "question" ? "asks" : "answers"} · round {turn.round}
+            {topic ? ` · ${topic.label.toLowerCase()}` : ""}
+          </span>
+          <em>
+            {source === "scripted"
+              ? "SCRIPTED"
+              : turn.answeredBy === "rule"
+                ? "RULE · NO AI CALL"
+                : "GEMINI"}
+          </em>
         </span>
-      )}
-      <EvidenceChips ids={turn.evidence} factMap={factMap} names={names} />
-      {turn.answeredBy === "rule" && source === "gemini" && (
-        <small className="grounding-note">
-          <ShieldCheck size={12} /> Nothing approved answers this, so it was
-          answered by rule without asking the AI to guess.
-        </small>
-      )}
-      {turn.grounding === "corrected" && (
-        <small className="grounding-note">
-          <ShieldCheck size={12} /> The AI draft couldn’t be fully verified, so
-          this answer was rewritten from approved facts only.
-        </small>
-      )}
+        <div className="ag-bubble">
+          <p>{turn.text}</p>
+          {turn.role === "answer" && (
+            <span className={`turn-status ${turn.status}`}>
+              {turn.status === "confirmed" ? (
+                <>
+                  <BadgeCheck size={13} /> Confirmed from approved profile
+                </>
+              ) : (
+                <>
+                  <CircleDashed size={13} /> Unknown · not shared yet
+                </>
+              )}
+            </span>
+          )}
+          <EvidenceChips ids={turn.evidence} factMap={factMap} names={names} />
+          {turn.answeredBy === "rule" && source === "gemini" && (
+            <small className="grounding-note">
+              <ShieldCheck size={12} /> Nothing approved answers this, so it was
+              answered by rule without asking the AI to guess.
+            </small>
+          )}
+          {turn.grounding === "corrected" && (
+            <small className="grounding-note">
+              <ShieldCheck size={12} /> The AI draft couldn’t be fully verified,
+              so this answer was rewritten from approved facts only.
+            </small>
+          )}
+        </div>
+      </div>
     </motion.div>
   );
 }
@@ -840,27 +988,105 @@ function SummaryPanel({
 }) {
   return (
     <div className="agent-summary">
-      <div className={`verdict ${summary.verdict}`}>
-        <span className="eyebrow">
-          {summary.source === "gemini"
-            ? "GEMINI SUMMARY · EVERY ITEM CITES VERIFIED FACTS"
-            : "SUMMARY ASSEMBLED FROM VERIFIED FACTS · NO AI CALL"}
-        </span>
-        <h3>
-          {summary.verdict === "clarify-first"
-            ? "One important question first."
-            : "Worth an introduction."}
-        </h3>
-        <p>{summary.explanation.text}</p>
-        <small>
-          This is an explanation, not a prediction. Hard requirements are
-          checked by the matching engine, never by AI.
-        </small>
+      <div className="summary-col confirmed">
+        <h4>
+          <Check size={16} /> Confirmed common ground
+        </h4>
+        {summary.commonGround.length ? (
+          <ul>
+            {summary.commonGround.map((c) => (
+              <li key={c.text}>
+                {c.text}
+                <EvidenceChips
+                  ids={c.evidence.slice(0, 4)}
+                  factMap={factMap}
+                  names={names}
+                />
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p>No confirmed common ground yet.</p>
+        )}
+      </div>
+      <div className="summary-col differences">
+        <h4>
+          <Scale size={16} /> Possible differences
+        </h4>
+        {summary.possibleDifferences.length ? (
+          <ul>
+            {summary.possibleDifferences.map((c) => (
+              <li key={c.text}>
+                {c.text}
+                <EvidenceChips
+                  ids={c.evidence.slice(0, 4)}
+                  factMap={factMap}
+                  names={names}
+                />
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p>No stated differences in the approved facts.</p>
+        )}
+      </div>
+      <div className="summary-col unknowns">
+        <h4>
+          <CircleDashed size={16} /> Still unknown
+        </h4>
+        {summary.unknowns.length ? (
+          <ul>
+            {summary.unknowns.map((u) => {
+              const status = handled[u.key];
+              const subject = u.subjectSide === "a" ? profile : peer;
+              return (
+                <li key={u.key}>
+                  {u.hard && <span className="hard-tag">Firm requirement</span>}
+                  {status === "shared" ? (
+                    <span className="resolved">
+                      <BadgeCheck size={13} /> Resolved with consent:{" "}
+                      {subject.name} shared “
+                      {attributeLabel(
+                        u.dimension,
+                        subject.attributes[u.dimension],
+                      )}
+                      ”.
+                    </span>
+                  ) : status === "declined" ? (
+                    <span>
+                      {subject.name} chose not to share{" "}
+                      {dimensionLabels[u.dimension].toLowerCase()}. It won’t be
+                      asked again.
+                    </span>
+                  ) : (
+                    <>
+                      {u.text}
+                      {canAsk && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => onAsk(u.key)}
+                        >
+                          {u.subjectSide === "b"
+                            ? `Ask ${peer.name} with consent`
+                            : "Answer for yourself"}
+                          <ArrowUpRight size={14} />
+                        </Button>
+                      )}
+                    </>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <p>Nothing important is unknown for either person’s preferences.</p>
+        )}
       </div>
       {!!summary.sharedActivities?.length && (
         <div className="shared-activities">
           <h4>
-            <CalendarHeart size={15} /> Things you could enjoy together
+            <CalendarHeart size={16} /> Things you could enjoy together
           </h4>
           <ul>
             {summary.sharedActivities.map((s) => (
@@ -893,104 +1119,22 @@ function SummaryPanel({
           </small>
         </div>
       )}
-      <div className="summary-columns">
-        <div className="summary-col confirmed">
-          <h4>
-            <Check size={15} /> Confirmed common ground
-          </h4>
-          {summary.commonGround.length ? (
-            <ul>
-              {summary.commonGround.map((c) => (
-                <li key={c.text}>
-                  {c.text}
-                  <EvidenceChips
-                    ids={c.evidence.slice(0, 4)}
-                    factMap={factMap}
-                    names={names}
-                  />
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p>No confirmed common ground yet.</p>
-          )}
-        </div>
-        <div className="summary-col differences">
-          <h4>
-            <Scale size={15} /> Possible differences
-          </h4>
-          {summary.possibleDifferences.length ? (
-            <ul>
-              {summary.possibleDifferences.map((c) => (
-                <li key={c.text}>
-                  {c.text}
-                  <EvidenceChips
-                    ids={c.evidence.slice(0, 4)}
-                    factMap={factMap}
-                    names={names}
-                  />
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p>No stated differences in the approved facts.</p>
-          )}
-        </div>
-        <div className="summary-col unknowns">
-          <h4>
-            <CircleDashed size={15} /> Still unknown
-          </h4>
-          {summary.unknowns.length ? (
-            <ul>
-              {summary.unknowns.map((u) => {
-                const status = handled[u.key];
-                const subject = u.subjectSide === "a" ? profile : peer;
-                return (
-                  <li key={u.key}>
-                    {u.hard && (
-                      <span className="hard-tag">Firm requirement</span>
-                    )}
-                    {status === "shared" ? (
-                      <span className="resolved">
-                        <BadgeCheck size={13} /> Resolved with consent:{" "}
-                        {subject.name} shared “
-                        {attributeLabel(
-                          u.dimension,
-                          subject.attributes[u.dimension],
-                        )}
-                        ”.
-                      </span>
-                    ) : status === "declined" ? (
-                      <span>
-                        {subject.name} chose not to share{" "}
-                        {dimensionLabels[u.dimension].toLowerCase()}. It won’t
-                        be asked again.
-                      </span>
-                    ) : (
-                      <>
-                        {u.text}
-                        {canAsk && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => onAsk(u.key)}
-                          >
-                            {u.subjectSide === "b"
-                              ? `Ask ${peer.name} with consent`
-                              : "Answer for yourself"}
-                            <ArrowUpRight size={14} />
-                          </Button>
-                        )}
-                      </>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          ) : (
-            <p>Nothing important is unknown for either person’s preferences.</p>
-          )}
-        </div>
+      <div className={`verdict ${summary.verdict}`}>
+        <span className="eyebrow">
+          {summary.source === "gemini"
+            ? "GEMINI SUMMARY · EVERY ITEM CITES VERIFIED FACTS"
+            : "SUMMARY ASSEMBLED FROM VERIFIED FACTS · NO AI CALL"}
+        </span>
+        <h3>
+          {summary.verdict === "clarify-first"
+            ? "One important question first."
+            : "Worth an introduction."}
+        </h3>
+        <p>{summary.explanation.text}</p>
+        <small>
+          This is an explanation, not a prediction. Hard requirements are
+          checked by the matching engine, never by AI.
+        </small>
       </div>
     </div>
   );
@@ -1023,8 +1167,8 @@ function NextSteps({
     <div className="agent-next">
       <div className="agent-next-rec">
         <span className="eyebrow">
-          <RefreshCw size={12} /> THE INTRODUCTION, RECALCULATED FROM APPROVED
-          INFORMATION
+          <RefreshCw size={12} /> The introduction, recalculated from approved
+          information
         </span>
         {eligible && recommendation ? (
           <>
@@ -1044,82 +1188,84 @@ function NextSteps({
           </p>
         )}
       </div>
-      {isMatched ? (
-        <div className="agent-next-action">
-          <Heart size={20} />
-          <strong>You’re connected.</strong>
-          <p>
-            Compare general availability and discover real places and events for
-            a first date.
-          </p>
-          <Button asChild>
-            <Link href={`/connections?with=${peer.id}#discover`}>
-              <CalendarHeart size={16} /> Plan your first date
-            </Link>
-          </Button>
-        </div>
-      ) : decision === "interested" ? (
-        <div className="synthetic-choice agent-next-action">
-          <p>
-            <Check size={14} /> Your interest is saved.
-          </p>
-          <span>
-            SIMULATE {peer.name.toUpperCase()}’S DECISION · FICTIONAL DEMO
-          </span>
-          <div>
+      <div className="agent-next-bar">
+        <Link href="/discover" className="button button-outline">
+          <ArrowLeft size={16} /> Back to Discover
+        </Link>
+        {isMatched ? (
+          <div className="agent-next-action">
+            <span>
+              <Heart size={18} /> <strong>You’re connected.</strong> Compare
+              availability and find a real first date.
+            </span>
+            <Button asChild>
+              <Link href={`/connections?with=${peer.id}#discover`}>
+                <CalendarHeart size={16} /> Plan your first date
+              </Link>
+            </Button>
+          </div>
+        ) : decision === "interested" ? (
+          <div className="synthetic-choice agent-next-action">
+            <p>
+              <Check size={14} /> Your interest is saved.
+            </p>
+            <span>
+              SIMULATE {peer.name.toUpperCase()}’S DECISION · FICTIONAL DEMO
+            </span>
+            <div>
+              <Button
+                size="sm"
+                onClick={() =>
+                  act(() =>
+                    dispatchDemo({
+                      type: "counterpart",
+                      id: peer.id,
+                      decision: "interested",
+                    }),
+                  )
+                }
+              >
+                {peer.name} is also interested <Heart size={14} />
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  act(() =>
+                    dispatchDemo({
+                      type: "counterpart",
+                      id: peer.id,
+                      decision: "pass",
+                    }),
+                  )
+                }
+              >
+                {peer.name} passes
+              </Button>
+            </div>
+          </div>
+        ) : eligible ? (
+          <div className="agent-next-action">
+            <span>
+              The matchmakers suggest; only people decide. {peer.name} only sees
+              your interest if it’s mutual.
+            </span>
             <Button
-              size="sm"
               onClick={() =>
                 act(() =>
                   dispatchDemo({
-                    type: "counterpart",
+                    type: "decision",
                     id: peer.id,
                     decision: "interested",
                   }),
                 )
               }
             >
-              {peer.name} is also interested <Heart size={14} />
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() =>
-                act(() =>
-                  dispatchDemo({
-                    type: "counterpart",
-                    id: peer.id,
-                    decision: "pass",
-                  }),
-                )
-              }
-            >
-              {peer.name} passes
+              <Heart size={16} /> I’m interested in {peer.name}
             </Button>
           </div>
-        </div>
-      ) : eligible ? (
-        <div className="agent-next-action">
-          <strong>Your decision, always.</strong>
-          <p>
-            The matchmakers suggest; only people decide. {peer.name} will only
-            see your interest if it’s mutual.
-          </p>
-          <Button
-            onClick={() =>
-              act(() =>
-                dispatchDemo({
-                  type: "decision",
-                  id: peer.id,
-                  decision: "interested",
-                }),
-              )
-            }
-          >
-            <Heart size={16} /> I’m interested in {peer.name}
-          </Button>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
     </div>
   );
 }

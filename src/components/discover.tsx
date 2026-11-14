@@ -6,7 +6,9 @@ import {
   ArrowUpRight,
   Check,
   ChevronDown,
+  CircleHelp,
   Heart,
+  Layers,
   MapPin,
   MessageCircle,
   ShieldCheck,
@@ -17,6 +19,9 @@ import {
   LoaderCircle,
   MessagesSquare,
   CirclePause,
+  Leaf,
+  CalendarRange,
+  UsersRound,
 } from "lucide-react";
 import { AppShell, NoProfile } from "./app-shell";
 import { Portrait } from "./portrait";
@@ -39,13 +44,21 @@ import {
   type Profile,
 } from "@/lib/profile";
 
+const list = (items: string[]) =>
+  items.length <= 1
+    ? (items[0] ?? "")
+    : `${items.slice(0, -1).join(", ")} and ${items.at(-1)}`;
+const genderWord = (g: Profile["gender"]) =>
+  g === "woman" ? "Women" : g === "man" ? "Men" : "Non-binary people";
+
 export function Discover() {
   const state = useDemo(),
     [notice, setNotice] = useState(""),
     [filter, setFilter] = useState<"all" | "questions" | "interested">("all");
   const [investigating, setInvestigating] = useState<string | null>(null),
     [passing, setPassing] = useState<string | null>(null),
-    [reporting, setReporting] = useState<string | null>(null);
+    [reporting, setReporting] = useState<string | null>(null),
+    [featuredId, setFeaturedId] = useState<string | null>(null);
   const [reason, setReason] = useState("Not the connection I’m looking for"),
     [prioritize, setPrioritize] = useState(false),
     [viewing, setViewing] = useState<string | null>(null);
@@ -93,6 +106,9 @@ export function Discover() {
         ? state.decisions[r.profile.id] === "interested"
         : true,
   );
+  const featured =
+    filtered.find((r) => r.profile.id === featuredId) ?? filtered[0];
+  const others = filtered.filter((r) => r !== featured);
   const selected = ranked.find((r) => r.profile.id === investigating);
   const viewed = collection.find((r) => r.profile.id === viewing)?.profile;
   const nextBatch = available
@@ -106,35 +122,57 @@ export function Discover() {
       setNotice(e instanceof Error ? e.message : "Please try again.");
     }
   }
+  const prefs = profile.preferences;
   return (
     <AppShell>
-      <div className="page-heading">
+      <div className="page-heading dc-heading">
         <div>
-          <span className="eyebrow">THOUGHTFULLY CHOSEN. NEVER ENDLESS.</span>
+          <span className="eyebrow">
+            <span className="eyebrow-star" aria-hidden="true">
+              ✳
+            </span>
+            Discover · curated introductions
+          </span>
           <h1>
-            A little more <em>possibility.</em>
+            Discover people who <em>feel right.</em>
           </h1>
           <p>
-            {profile.name}, meet a few people who share what matters to you.
+            {profile.name}, a small set of people chosen by your AI matchmaker
+            from shared values, interests and what you’re both looking for.
+            Never an endless feed.
           </p>
         </div>
-        <Link href="/profile" className="preference-link">
-          <SlidersHorizontal size={17} />
-          Your preferences
-        </Link>
       </div>
-      <div className="matchmaker-banner">
-        <PiperMark />
-        <div>
-          <strong>
-            Thoughtful introductions start with the right questions.
-          </strong>
-          <p>
-            I’ve looked at both sides of every introduction. You’ll see the
-            common ground, the differences, and what we haven’t learned yet.
-          </p>
-        </div>
-        <span className="banner-flower">✳</span>
+      <div className="dc-filters" aria-label="Your matching preferences">
+        <Link href="/profile" className="pill" title="Edit in My Profile">
+          <MapPin size={15} />
+          {prefs.locationMode === "local"
+            ? `Near ${profile.city || "you"}`
+            : "Any city"}
+        </Link>
+        <Link href="/profile" className="pill" title="Edit in My Profile">
+          <Heart size={15} />
+          {title(profile.intent)}
+          {prefs.strictIntent ? " only" : ""}
+        </Link>
+        <Link href="/profile" className="pill" title="Edit in My Profile">
+          <CalendarRange size={15} />
+          Age {prefs.minAge}–{prefs.maxAge}
+        </Link>
+        <Link href="/profile" className="pill" title="Edit in My Profile">
+          <UsersRound size={15} />
+          {prefs.genders.length
+            ? prefs.genders.map(genderWord).join(", ")
+            : "Anyone"}
+        </Link>
+        <Link
+          href="/profile"
+          className="pill dc-edit"
+          title="Edit in My Profile"
+        >
+          <SlidersHorizontal size={15} />
+          Edit preferences
+        </Link>
       </div>
       {paused && (
         <div className="notice paused-notice" role="status">
@@ -169,34 +207,40 @@ export function Discover() {
           </button>
         </div>
       )}
-      <div className="discovery-toolbar">
-        <div className="tabs" role="group" aria-label="Filter introductions">
+      <div className="dc-toolbar">
+        <div
+          className="segmented"
+          role="group"
+          aria-label="Filter introductions"
+        >
           <button
             className={filter === "all" ? "active" : ""}
-            onClick={() => {
-              setFilter("all");
-            }}
+            aria-pressed={filter === "all"}
+            onClick={() => setFilter("all")}
           >
             For you <span>{collection.length}</span>
           </button>
           <button
             className={filter === "questions" ? "active" : ""}
+            aria-pressed={filter === "questions"}
             onClick={() => setFilter("questions")}
           >
             A question to explore
           </button>
           <button
             className={filter === "interested" ? "active" : ""}
+            aria-pressed={filter === "interested"}
             onClick={() => setFilter("interested")}
           >
             Your interest
           </button>
         </div>
-        <span className="curated-note">
-          <Sparkles size={13} />A considered collection
+        <span className="dc-count">
+          <Sparkles size={14} />
+          {state.introducedIds.length} of 6 introductions in this collection
         </span>
       </div>
-      {!filtered.length ? (
+      {!filtered.length || !featured ? (
         <div className="empty-state">
           <Heart size={32} />
           <h2>
@@ -255,56 +299,84 @@ export function Discover() {
           </div>
         </div>
       ) : (
-        <div className="recommendation-grid">
-          {filtered.map((r, i) => (
-            <MatchCard
-              key={r.profile.id + JSON.stringify(r.profile.attributes)}
-              recommendation={r}
-              onView={() => setViewing(r.profile.id)}
-              viewer={profile}
-              index={i}
-              decision={state.decisions[r.profile.id]}
-              isMatched={matched(state, r.profile.id)}
-              hasAgentSession={!!state.agentSessions[r.profile.id]}
-              pendingQuestions={r.missing.filter(
-                (q) => !state.questions[q.key],
-              )}
-              declinedCount={
-                r.missing.filter((q) => state.questions[q.key] === "declined")
-                  .length
-              }
-              onInterest={() =>
-                act(
-                  () =>
-                    dispatchDemo({
-                      type: "decision",
-                      id: r.profile.id,
-                      decision: "interested",
-                    }),
-                  `Your interest in ${r.profile.name} is saved. A connection needs their interest too.`,
-                )
-              }
-              onPass={() => {
-                setPassing(r.profile.id);
-                setPrioritize(false);
-              }}
-              onInvestigate={() => setInvestigating(r.profile.id)}
-              onCounterpart={(decision) =>
-                act(
-                  () =>
-                    dispatchDemo({
-                      type: "counterpart",
-                      id: r.profile.id,
-                      decision,
-                    }),
-                  decision === "interested"
-                    ? `Demo: ${r.profile.name} also expressed interest. Your messaging space is open.`
-                    : `Demo: ${r.profile.name} passed. No connection was created.`,
-                )
-              }
-              onReport={() => setReporting(r.profile.id)}
-            />
-          ))}
+        <div className={`dc-stage ${others.length ? "" : "solo"}`}>
+          <FeaturedCard
+            key={
+              featured.profile.id + JSON.stringify(featured.profile.attributes)
+            }
+            recommendation={featured}
+            isTop={featured === filtered[0] && filter === "all"}
+            onView={() => setViewing(featured.profile.id)}
+            viewer={profile}
+            decision={state.decisions[featured.profile.id]}
+            isMatched={matched(state, featured.profile.id)}
+            hasAgentSession={!!state.agentSessions[featured.profile.id]}
+            pendingQuestions={featured.missing.filter(
+              (q) => !state.questions[q.key],
+            )}
+            declinedCount={
+              featured.missing.filter(
+                (q) => state.questions[q.key] === "declined",
+              ).length
+            }
+            onInterest={() =>
+              act(
+                () =>
+                  dispatchDemo({
+                    type: "decision",
+                    id: featured.profile.id,
+                    decision: "interested",
+                  }),
+                `Your interest in ${featured.profile.name} is saved. A connection needs their interest too.`,
+              )
+            }
+            onPass={() => {
+              setPassing(featured.profile.id);
+              setPrioritize(false);
+            }}
+            onInvestigate={() => setInvestigating(featured.profile.id)}
+            onCounterpart={(decision) =>
+              act(
+                () =>
+                  dispatchDemo({
+                    type: "counterpart",
+                    id: featured.profile.id,
+                    decision,
+                  }),
+                decision === "interested"
+                  ? `Demo: ${featured.profile.name} also expressed interest. Your messaging space is open.`
+                  : `Demo: ${featured.profile.name} passed. No connection was created.`,
+              )
+            }
+            onReport={() => setReporting(featured.profile.id)}
+          />
+          {others.length > 0 && (
+            <aside className="dc-queue" aria-label="More introductions">
+              <h3 className="dc-queue-title">Also in your collection</h3>
+              {others.map((r, i) => (
+                <MiniCard
+                  key={r.profile.id}
+                  recommendation={r}
+                  index={i}
+                  status={
+                    matched(state, r.profile.id)
+                      ? "Connected"
+                      : state.decisions[r.profile.id] === "interested"
+                        ? "Your interest is saved"
+                        : state.agentSessions[r.profile.id]
+                          ? "AIs have talked"
+                          : null
+                  }
+                  onSelect={() => {
+                    setFeaturedId(r.profile.id);
+                    document
+                      .getElementById("main")
+                      ?.scrollIntoView({ block: "start", behavior: "smooth" });
+                  }}
+                />
+              ))}
+            </aside>
+          )}
         </div>
       )}
       {nextBatch.length > 0 && (
@@ -338,9 +410,18 @@ export function Discover() {
           title={`${viewed.name}, ${viewed.age} · fictional profile`}
           onClose={() => setViewing(null)}
         >
-          <p>
-            {viewed.city} · {title(viewed.gender)} · {title(viewed.intent)}
-          </p>
+          <div className="profile-modal-head">
+            <div className="profile-modal-photo">
+              <Portrait
+                id={viewed.id}
+                gender={viewed.gender}
+                age={viewed.age}
+              />
+            </div>
+            <p>
+              {viewed.city} · {title(viewed.gender)} · {title(viewed.intent)}
+            </p>
+          </div>
           <p>{viewed.bio}</p>
           <h3>Approved interests & values</h3>
           <p>{viewed.interests.join(", ")}</p>
@@ -450,10 +531,61 @@ export function Discover() {
     </AppShell>
   );
 }
-function MatchCard({
+
+function MiniCard({
+  recommendation: r,
+  index,
+  status,
+  onSelect,
+}: {
+  recommendation: Recommendation;
+  index: number;
+  status: string | null;
+  onSelect: () => void;
+}) {
+  const p = r.profile;
+  return (
+    <MotionCard className="dc-mini" index={index + 1}>
+      <div className="dc-mini-photo">
+        <Portrait id={p.id} gender={p.gender} age={p.age} />
+      </div>
+      <div className="dc-mini-body">
+        <h2>
+          {p.name}
+          <span>, {p.age}</span>
+        </h2>
+        <span className="dc-mini-meta">
+          <MapPin size={13} />
+          {p.city}
+        </span>
+        <span className="dc-mini-tags">
+          {(r.commonInterests.length ? r.commonInterests : p.interests)
+            .slice(0, 3)
+            .map(title)
+            .join(" · ")}
+        </span>
+        {status && (
+          <span className="dc-mini-status">
+            <Check size={12} /> {status}
+          </span>
+        )}
+      </div>
+      <button
+        type="button"
+        className="dc-mini-open"
+        aria-label={`View ${p.name}’s introduction`}
+        onClick={onSelect}
+      >
+        <ArrowRight size={18} />
+      </button>
+    </MotionCard>
+  );
+}
+
+function FeaturedCard({
   recommendation: r,
   viewer,
-  index,
+  isTop,
   decision,
   isMatched,
   hasAgentSession,
@@ -468,7 +600,7 @@ function MatchCard({
 }: {
   recommendation: Recommendation;
   viewer: Profile;
-  index: number;
+  isTop: boolean;
   decision?: string;
   isMatched: boolean;
   hasAgentSession: boolean;
@@ -485,6 +617,7 @@ function MatchCard({
     [facts, setFacts] = useState<string[] | null>(null),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
+  const p = r.profile;
   async function explain() {
     setBusy(true);
     setError("");
@@ -492,7 +625,7 @@ function MatchCard({
       const res = await fetch("/api/ai/explain", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ a: viewer, b: r.profile }),
+        body: JSON.stringify({ a: viewer, b: p }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
@@ -507,97 +640,161 @@ function MatchCard({
       setBusy(false);
     }
   }
+  const shared = new Set(r.commonInterests);
+  const sameIntent = !!viewer.intent && viewer.intent === p.intent;
   return (
-    <MotionCard className="match-card" index={index}>
-      <div className="match-portrait">
-        <Portrait id={r.profile.id} />
-        <span className="portrait-badge">FICTIONAL PROFILE</span>
-        <button
-          className="safety-button"
-          aria-label={`Block or report ${r.profile.name}`}
-          onClick={onReport}
-        >
-          <Flag size={16} />
-        </button>
-        <div className="portrait-overlay">
-          <h2>
-            {r.profile.name}
-            <span>, {r.profile.age}</span>
-          </h2>
-          <span>
-            <MapPin size={13} />
-            {r.profile.city}
-            <span className="location-divider">·</span>
-            {title(r.profile.intent)}
+    <MotionCard className="dc-feature" index={0}>
+      <div className="dc-profile">
+        <div className="dc-photo">
+          <Portrait id={p.id} gender={p.gender} age={p.age} />
+          <span className="dc-photo-badge">
+            <Sparkles size={14} />
+            {isTop ? "Top introduction for you" : r.label}
           </span>
+          <span className="dc-photo-note">Fictional profile · illustrated</span>
+          <button
+            className="dc-flag"
+            aria-label={`Block or report ${p.name}`}
+            onClick={onReport}
+          >
+            <Flag size={16} />
+          </button>
+        </div>
+        <div className="dc-info">
+          <header>
+            <h2>
+              {p.name}
+              <span>, {p.age}</span>
+            </h2>
+            <ul className="dc-meta">
+              <li>
+                <MapPin size={15} />
+                {p.city}
+              </li>
+              <li>
+                <Heart size={15} />
+                {title(p.intent)}
+              </li>
+              {p.attributes.pace && (
+                <li>
+                  <Leaf size={15} />
+                  {title(p.attributes.pace)} pace
+                </li>
+              )}
+            </ul>
+          </header>
+          <div className="dc-prompts">
+            {p.bio && (
+              <div className="dc-prompt">
+                <span>In {p.name}’s words</span>
+                <p>{p.bio}</p>
+              </div>
+            )}
+            {p.interests.length > 0 && (
+              <div className="dc-prompt">
+                <span>I’m into</span>
+                <div className="tag-row dc-tags">
+                  {p.interests.map((t) => (
+                    <span key={t} className={shared.has(t) ? "shared" : ""}>
+                      {shared.has(t) && <Check size={12} />}
+                      {title(t)}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {p.values.length > 0 && (
+              <div className="dc-prompt">
+                <span>What matters to me</span>
+                <p>{list(p.values.map((v) => v.toLowerCase()))}</p>
+              </div>
+            )}
+          </div>
+          <button type="button" className="text-link" onClick={onView}>
+            Open approved profile <ArrowUpRight size={14} />
+          </button>
         </div>
       </div>
-      <div className="match-card-body">
-        <span className="match-label">
-          <Sparkles size={14} />
-          {r.label}
-        </span>
-        <p className="match-bio">{r.profile.bio}</p>
-        <button type="button" className="text-link" onClick={onView}>
-          Open approved profile <ArrowUpRight size={13} />
-        </button>
-        <div className="tag-row">
-          {r.commonInterests.slice(0, 3).map((t) => (
-            <span key={t}>{title(t)}</span>
-          ))}
-          {r.commonInterests.length === 0 && (
-            <span>Different interests to explore</span>
-          )}
+
+      <section className="dc-why" aria-label={`Why Piper introduced ${p.name}`}>
+        <header>
+          <h3>
+            Why Piper introduced <em>{p.name}.</em>
+          </h3>
+          <span className="dc-why-tag">
+            <PiperMark /> {r.label}
+          </span>
+        </header>
+        <div className="dc-why-grid">
+          <div>
+            <h4>
+              <Leaf size={17} /> Shared interests
+            </h4>
+            <p>
+              {r.commonInterests.length
+                ? `You both enjoy ${list(r.commonInterests.map((t) => t.toLowerCase()))}.`
+                : "No shared interests yet: different interests to explore."}
+            </p>
+          </div>
+          <div>
+            <h4>
+              <Heart size={17} /> Aligned intentions
+            </h4>
+            <p>
+              {sameIntent
+                ? `You’re both looking for ${title(p.intent).toLowerCase()}.`
+                : `You: ${title(viewer.intent).toLowerCase()}. ${p.name}: ${title(p.intent).toLowerCase()}.`}
+              {r.commonValues.length > 0 &&
+                ` You both value ${list(r.commonValues.map((v) => v.toLowerCase()))}.`}
+            </p>
+          </div>
+          <div>
+            <h4>
+              <Layers size={17} /> Possible differences
+            </h4>
+            {r.differences.length ? (
+              <p>{r.differences.slice(0, 2).join(" ")}</p>
+            ) : (
+              <p>
+                None found in what’s been shared so far. There’s still more to
+                learn.
+              </p>
+            )}
+          </div>
+          <div>
+            <h4>
+              <CircleHelp size={17} /> Unresolved question
+            </h4>
+            {pendingQuestions.length ? (
+              <>
+                <p>{pendingQuestions[0].reason}</p>
+                <button className="dc-ask" onClick={onInvestigate}>
+                  <MessageCircle size={16} />
+                  <span>
+                    A question worth asking
+                    <small>
+                      {dimensionLabels[pendingQuestions[0].dimension]} ·{" "}
+                      {pendingQuestions[0].hard
+                        ? "Important preference"
+                        : "A little more clarity"}
+                    </small>
+                  </span>
+                  <ArrowUpRight size={16} />
+                </button>
+              </>
+            ) : (
+              <p>
+                Nothing important is unknown for either person’s preferences.
+              </p>
+            )}
+            {!!declinedCount && (
+              <p className="declined-note">
+                <ShieldCheck size={13} />
+                An optional question was declined. We won’t ask it again.
+              </p>
+            )}
+          </div>
         </div>
-        <div className="why-card">
-          <span>
-            <PiperMark />
-            WHY THIS INTRODUCTION
-          </span>
-          <p>{r.evidence.slice(0, 2).join(" ")}</p>
-        </div>
-        <Link
-          className="question-prompt agents-prompt"
-          href={`/agents?with=${r.profile.id}`}
-        >
-          <span className="question-icon">
-            <MessagesSquare size={18} />
-          </span>
-          <span>
-            <strong>
-              {hasAgentSession ? "See what our AIs found" : "Let our AIs talk"}
-            </strong>
-            <small>
-              {hasAgentSession
-                ? "Matchmaker conversation saved"
-                : "Two matchmakers · up to 3 questions · approved facts only"}
-            </small>
-          </span>
-          <ArrowUpRight size={18} />
-        </Link>
-        {!!pendingQuestions.length && (
-          <button className="question-prompt" onClick={onInvestigate}>
-            <span className="question-icon">
-              <MessageCircle size={18} />
-            </span>
-            <span>
-              <strong>A question worth asking</strong>
-              <small>
-                {dimensionLabels[pendingQuestions[0].dimension]} ·{" "}
-                {pendingQuestions[0].hard
-                  ? "Important preference"
-                  : "A little more clarity"}
-              </small>
-            </span>
-            <ArrowUpRight size={18} />
-          </button>
-        )}
-        {!!declinedCount && (
-          <p className="declined-note">
-            <ShieldCheck size={13} />
-            An optional question was declined. We won’t ask it again.
-          </p>
-        )}
         <button
           className="details-toggle"
           aria-expanded={expanded}
@@ -680,48 +877,68 @@ function MatchCard({
             )}
           </div>
         )}
-        <div className="match-card-actions">
-          {isMatched ? (
-            <Button asChild>
-              <Link href={`/connections?with=${r.profile.id}`}>
-                <MessageCircle size={16} />
-                Open your connection
-              </Link>
-            </Button>
-          ) : decision === "interested" ? (
-            <div className="synthetic-choice">
-              <p>
-                <Check size={14} />
-                Your interest is saved.
-              </p>
-              <span>SIMULATE THEIR DECISION · FICTIONAL DEMO</span>
-              <div>
-                <Button size="sm" onClick={() => onCounterpart("interested")}>
-                  Also interested <Heart size={14} />
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => onCounterpart("pass")}
-                >
-                  They pass
-                </Button>
-              </div>
+      </section>
+
+      <div className="dc-actions">
+        <Link
+          className="button button-primary button-lg dc-talk"
+          href={`/agents?with=${p.id}`}
+        >
+          <Sparkles size={18} />
+          {hasAgentSession ? "See what our AIs found" : "Let our AIs talk"}
+          <ArrowRight size={18} />
+        </Link>
+        {isMatched ? (
+          <Button asChild size="lg" variant="secondary">
+            <Link href={`/connections?with=${p.id}`}>
+              <MessageCircle size={17} />
+              Open your connection
+            </Link>
+          </Button>
+        ) : decision === "interested" ? (
+          <div className="synthetic-choice">
+            <p>
+              <Check size={14} />
+              Your interest is saved.
+            </p>
+            <span>SIMULATE THEIR DECISION · FICTIONAL DEMO</span>
+            <div>
+              <Button size="sm" onClick={() => onCounterpart("interested")}>
+                Also interested <Heart size={14} />
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => onCounterpart("pass")}
+              >
+                They pass
+              </Button>
             </div>
-          ) : (
-            <>
-              <Button variant="outline" onClick={onPass}>
-                <X size={17} />
-                Pass
-              </Button>
-              <Button onClick={onInterest}>
-                <Heart size={17} />
-                I’m interested
-              </Button>
-            </>
-          )}
-        </div>
+          </div>
+        ) : (
+          <>
+            <Button variant="outline" size="lg" onClick={onPass}>
+              <X size={18} />
+              Pass
+            </Button>
+            <Button
+              variant="secondary"
+              size="lg"
+              className="dc-interested"
+              onClick={onInterest}
+            >
+              <Heart size={18} />
+              I’m interested
+            </Button>
+          </>
+        )}
       </div>
+      <p className="dc-action-note">
+        {hasAgentSession
+          ? "Matchmaker conversation saved."
+          : "Two matchmakers · 2–3 focused rounds · approved facts only."}{" "}
+        {p.name} only sees your interest if it’s mutual.
+      </p>
     </MotionCard>
   );
 }

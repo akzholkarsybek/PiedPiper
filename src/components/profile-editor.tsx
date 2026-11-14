@@ -100,7 +100,7 @@ export function ProfileEditor({
           included in this profile.
         </p>
       </div>
-      <fieldset>
+      <fieldset id="essentials">
         <legend>The essentials</legend>
         <div className="form-grid">
           <label>
@@ -158,7 +158,7 @@ export function ProfileEditor({
           </label>
         </div>
       </fieldset>
-      <fieldset>
+      <fieldset id="about-you">
         <legend>A little more you</legend>
         <label>
           Your introduction
@@ -203,7 +203,7 @@ export function ProfileEditor({
           ))}
         </div>
       </fieldset>
-      <fieldset>
+      <fieldset id="preferences">
         <legend>Your kind of connection</legend>
         <p className="field-help">
           Choose the partner age range, location and intention settings that fit

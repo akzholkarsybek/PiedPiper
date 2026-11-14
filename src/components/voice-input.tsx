@@ -162,41 +162,54 @@ export function VoiceInput({
     }
   }
   return (
-    <section className="voice-input" aria-label="Voice onboarding">
-      <label className="check-label">
-        <input
-          type="checkbox"
-          checked={micConsent}
-          disabled={recording}
-          onChange={(e) => setMicConsent(e.target.checked)}
-        />
-        I consent to microphone use and my browser’s speech service processing
-        fictional speech.
-      </label>
-      <div className="inline-actions">
+    <section
+      className={`voice-input ${recording ? "is-recording" : ""}`}
+      aria-label="Voice onboarding"
+    >
+      <div className="voice-stage">
+        <span className="voice-wave" aria-hidden="true">
+          {WAVE.map((h, i) => (
+            <i
+              key={i}
+              style={{ height: `${h}%`, animationDelay: `${i * 70}ms` }}
+            />
+          ))}
+        </span>
         <Button
           type="button"
-          variant={recording ? "destructive" : "secondary"}
+          className="voice-mic"
+          variant={recording ? "destructive" : "default"}
           disabled={disabled || !micConsent}
           onClick={recording ? stop : start}
         >
-          {recording ? <Square size={16} /> : <Mic size={17} />}{" "}
-          {recording ? "Stop recording" : "Talk to Piper"}
+          {recording ? <Square size={26} /> : <Mic size={30} />}
+          <span className="voice-mic-label">
+            {recording ? "Stop recording" : "Talk to Piper"}
+          </span>
         </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          type="button"
-          disabled={disabled}
-          onClick={clear}
-        >
-          Clear transcript
-        </Button>
+        <span className="voice-wave" aria-hidden="true">
+          {WAVE.map((h, i) => (
+            <i
+              key={i}
+              style={{
+                height: `${WAVE[WAVE.length - 1 - i]}%`,
+                animationDelay: `${i * 70}ms`,
+              }}
+            />
+          ))}
+        </span>
       </div>
-      {recording && (
+      {recording ? (
         <p role="status" className="recording-status">
           <span className="status-dot" />
-          Recording · speak naturally · stop to review before sending
+          Recording… speak naturally · stop to review before sending
+          <Elapsed />
+        </p>
+      ) : (
+        <p className="voice-hint">
+          {micConsent
+            ? "Press the microphone and talk about your life, values and what you’re looking for."
+            : "Allow microphone use below to talk instead of typing."}
         </p>
       )}
       {interim && (
@@ -209,29 +222,68 @@ export function VoiceInput({
           {error}
         </p>
       )}
+      <div className="voice-controls">
+        <label className="check-label">
+          <input
+            type="checkbox"
+            checked={micConsent}
+            disabled={recording}
+            onChange={(e) => setMicConsent(e.target.checked)}
+          />
+          I consent to microphone use and my browser’s speech service processing
+          fictional speech.
+        </label>
+        <label className="check-label">
+          <input
+            type="checkbox"
+            checked={spoken}
+            onChange={(e) => setSpoken(e.target.checked)}
+          />
+          <Volume2 size={14} />
+          Read Piper’s responses aloud (browser voice)
+        </label>
+        <div className="voice-buttons">
+          {spoken && (
+            <button
+              type="button"
+              className="text-link"
+              onClick={() => window.speechSynthesis?.cancel()}
+            >
+              Stop spoken response
+            </button>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            type="button"
+            disabled={disabled}
+            onClick={clear}
+          >
+            Clear transcript
+          </Button>
+        </div>
+      </div>
       <p className="fine-print">
-        Review and correct the text below, then press Send. Nothing is
-        automatically sent to Gemini. Your browser may send audio to its speech
-        provider. This app does not retain raw audio.
+        Speech becomes text in the box below; nothing is sent to Gemini until
+        you press Send. Your browser may send audio to its speech provider. This
+        app does not retain raw audio.
       </p>
-      <label className="check-label">
-        <input
-          type="checkbox"
-          checked={spoken}
-          onChange={(e) => setSpoken(e.target.checked)}
-        />
-        <Volume2 size={14} />
-        Read Piper’s responses aloud (browser voice)
-      </label>
-      {spoken && (
-        <button
-          type="button"
-          className="text-link"
-          onClick={() => window.speechSynthesis?.cancel()}
-        >
-          Stop spoken response
-        </button>
-      )}
     </section>
+  );
+}
+
+const WAVE = [18, 34, 52, 30, 64, 42, 80, 46, 60, 28, 44, 22];
+
+/** Recording timer; mounted only while recording. */
+function Elapsed() {
+  const [seconds, setSeconds] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setSeconds((s) => s + 1), 1000);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <span className="voice-timer">
+      {Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, "0")}
+    </span>
   );
 }

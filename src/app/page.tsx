@@ -1,59 +1,83 @@
 import Link from "next/link";
 import {
-  ArrowUpRight,
   ArrowRight,
-  Heart,
-  Sparkles,
-  MessageCircle,
-  ShieldCheck,
+  ArrowUpRight,
+  CalendarHeart,
   Check,
-  MoveUpRight,
-  Leaf,
+  Heart,
+  MessageCircle,
+  MessagesSquare,
+  ShieldCheck,
+  Sparkles,
+  UsersRound,
 } from "lucide-react";
 import { Brand, PiperMark } from "@/components/brand";
 import { Portrait } from "@/components/portrait";
 import { Button } from "@/components/ui/button";
 
+const steps = [
+  {
+    icon: MessageCircle,
+    title: "Talk to Piper",
+    text: "Speak or type a natural conversation about your life, values and what you’re looking for. You review every detail before it’s used.",
+  },
+  {
+    icon: MessagesSquare,
+    title: "Let the AIs compare notes",
+    text: "Your matchmaker and theirs ask a few focused questions using only approved facts, then show what’s shared, different and still unknown.",
+  },
+  {
+    icon: CalendarHeart,
+    title: "Make it real",
+    text: "When you both say yes, compare general availability and pick from verified cafés, parks, concerts and museums for a first date.",
+  },
+];
+
 export default function Home() {
   return (
-    <>
+    <div className="landing">
       <header className="landing-nav">
         <Brand />
         <nav aria-label="Main navigation">
           <a href="#how-it-works">How it works</a>
           <a href="#the-difference">The Piper difference</a>
-          <a href="#your-pace">Your privacy</a>
+          <a href="#safety">Safety & privacy</a>
         </nav>
-        <Button asChild size="sm" variant="outline">
+        <Button asChild size="sm">
           <Link href="/onboarding">
             Get started <ArrowUpRight size={15} />
           </Link>
         </Button>
       </header>
       <main id="main">
-        <section className="hero section-wrap">
-          <div className="hero-copy">
+        <section className="lp-hero">
+          <div className="lp-hero-copy">
             <span className="eyebrow">
-              <span className="tiny-star">✳</span> A MORE HUMAN WAY TO MEET
+              <span className="eyebrow-star" aria-hidden="true">
+                ✳
+              </span>
+              A more human way to date
             </span>
             <h1>
               Stop swiping.
               <br />
-              Start <em>connecting.</em>
+              <span>
+                Start <em>something real.</em>
+              </span>
             </h1>
-            <p className="hero-description">
-              Your AI finds the people.
-              <br />
-              You build the relationship.
+            <p className="lp-lede">
+              Pied Piper uses AI to get to know you, understand what you’re
+              looking for, and introduce you to people you’re genuinely
+              compatible with.
             </p>
-            <p className="hero-note">
-              Meet Piper, your thoughtful little matchmaker. Real conversations,
-              intentional introductions, and people who make sense for you.
+            <p className="lp-promise">
+              <strong>Your AI finds the people.</strong> You build the
+              relationship.
             </p>
-            <div className="hero-actions">
+            <div className="lp-actions">
               <Button asChild size="lg">
                 <Link href="/onboarding">
-                  Talk to Piper <ArrowUpRight size={19} />
+                  Talk to Piper <ArrowUpRight size={18} />
                 </Link>
               </Button>
               <Button asChild variant="outline" size="lg">
@@ -62,163 +86,143 @@ export default function Home() {
                 </Link>
               </Button>
             </div>
-            <div className="hero-footnote">
-              <span className="mini-hearts">
-                <Heart size={14} />
-                <Heart size={14} />
-                <Heart size={14} />
+            <div className="lp-proof">
+              <span className="avatar-stack" aria-hidden="true">
+                {["fictional-astana-003", "fictional-astana-010", "maya"].map(
+                  (id) => (
+                    <span key={id}>
+                      <Portrait id={id} />
+                    </span>
+                  ),
+                )}
               </span>
-              No endless feed. No account needed to explore.
+              <span>
+                Explore with 180 fictional demo profiles in Astana. No sign-up,
+                adults 18+.
+              </span>
             </div>
           </div>
           <div
-            className="hero-art"
-            aria-label="Illustration of a thoughtful introduction between fictional profiles"
+            className="lp-art"
+            role="img"
+            aria-label="Illustration: two fictional demo profiles, Jamie and Lena, introduced by Piper"
           >
-            <div className="orbit orbit-one" />
-            <div className="orbit orbit-two" />
-            <span className="art-spark spark-one">✳</span>
-            <span className="art-spark spark-two">✧</span>
-            <div className="hero-profile hero-profile-back">
-              <Portrait id="daniel" />
-              <div className="hero-profile-caption">
+            <div className="lp-orbit" aria-hidden="true" />
+            <span className="lp-spark lp-spark-a" aria-hidden="true">
+              ✦
+            </span>
+            <span className="lp-spark lp-spark-b" aria-hidden="true">
+              ✳
+            </span>
+            <figure className="lp-profile lp-profile-a">
+              <Portrait id="jamie" gender="man" age={32} />
+              <figcaption>
                 <strong>Jamie, 32</strong>
-                <span>Big walks. Bigger conversations.</span>
-              </div>
-            </div>
-            <div className="hero-profile hero-profile-front">
-              <Portrait id="lena" />
-              <div className="hero-profile-caption">
+                <span>Hiking, good coffee, long conversations.</span>
+              </figcaption>
+            </figure>
+            <figure className="lp-profile lp-profile-b">
+              <Portrait id="lena" gender="woman" age={30} />
+              <figcaption>
                 <strong>
                   Lena, 30{" "}
-                  <span className="check-circle">
+                  <span className="lp-check">
                     <Check size={11} />
                   </span>
                 </strong>
-                <span>Curiosity looks good on you.</span>
-              </div>
+                <span>Curious, kind, and up for adventure.</span>
+              </figcaption>
+            </figure>
+            <div className="lp-pill">
+              <span className="status-dot" /> Introduced by Piper
             </div>
-            <div className="piper-note">
+            <div className="lp-insight">
               <PiperMark />
               <div>
-                <span>A LITTLE THOUGHT FROM PIPER</span>
+                <span>YOUR AI MATCHMAKER</span>
                 <p>
-                  Both curious. Both intentional.
-                  <br />
-                  This could be a lovely beginning.
+                  Both love hiking and live music, and both want something
+                  long-term. Worth an introduction.
                 </p>
               </div>
-              <Heart size={19} />
+              <Heart size={18} />
             </div>
-            <div className="floating-pill">
-              <span className="status-dot" /> Shared values. Fresh
-              possibilities.
-            </div>
-            <span className="illustration-label">
-              FICTIONAL DEMO PROFILES · ILLUSTRATED
+            <span className="lp-art-label">
+              Fictional demo profiles · illustrated
             </span>
           </div>
         </section>
-        <div className="belief-strip">
-          <span>Less searching, more living.</span>
-          <span>
-            <Sparkles size={18} /> Thoughtfully introduced
-          </span>
-          <span>
-            <MessageCircle size={18} /> Conversation first
-          </span>
-          <span>
-            <ShieldCheck size={18} /> Always your choice
-          </span>
-        </div>
-        <section id="how-it-works" className="how-section section-wrap">
-          <div className="section-heading">
-            <span className="eyebrow">A DIFFERENT KIND OF FIRST MOVE</span>
-            <h2>
-              A little conversation.
-              <br />A whole new <em>possibility.</em>
-            </h2>
-            <p>
-              You are more than six photos and a clever prompt.
-              <br />
-              Let’s start with what actually matters to you.
-            </p>
+
+        <section id="how-it-works" className="lp-how">
+          <div className="lp-rule">
+            <span>How it works</span>
           </div>
-          <div className="steps-grid">
-            <article>
-              <span className="step-number">01 /</span>
-              <div className="step-illustration conversation-illustration">
-                <span>What does your ideal Sunday feel like?</span>
-                <span>A long walk. Someone to cook with.</span>
-                <span>
-                  That’s a lovely place to start. <Heart size={13} />
+          <ol className="lp-steps">
+            {steps.map((s, i) => (
+              <li key={s.title}>
+                <span className="lp-step-icon">
+                  <s.icon size={26} />
                 </span>
-              </div>
-              <h3>Be yourself. We’re listening.</h3>
+                <div>
+                  <h3>
+                    {i + 1}. {s.title}
+                  </h3>
+                  <p>{s.text}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        <section id="the-difference" className="lp-difference">
+          <div className="lp-difference-intro">
+            <span className="eyebrow">The Pied Piper difference</span>
+            <h2>
+              Thoughtful dating,
+              <br />
+              with a little <em>AI magic.</em>
+            </h2>
+          </div>
+          <div className="lp-features">
+            <article>
+              <UsersRound size={28} />
+              <h3>AI matchmakers</h3>
               <p>
-                Tell Piper about your life, your values, and the kind of
-                connection you’re looking for.
+                A personal matchmaker that learns what matters to you and
+                introduces a small, considered set of people, never an endless
+                feed.
               </p>
             </article>
             <article>
-              <span className="step-number">02 /</span>
-              <div className="step-illustration affinity-illustration">
-                <span>
-                  <Leaf /> Your pace
-                </span>
-                <span>
-                  <Heart /> Your values
-                </span>
-                <span>
-                  <Sparkles /> Your kind of person
-                </span>
-              </div>
-              <h3>Meet people with intention.</h3>
+              <Sparkles size={28} />
+              <h3>Evidence, not guesses</h3>
               <p>
-                Discover a small, considered set of introductions that respect
-                both people’s preferences.
+                Every recommendation shows confirmed common ground, possible
+                differences and what’s still unknown. No compatibility scores.
               </p>
             </article>
             <article>
-              <span className="step-number">03 /</span>
-              <div className="step-illustration connection-illustration">
-                <div>
-                  <Portrait id="daniel" />
-                </div>
-                <span>
-                  <Heart fill="currentColor" />
-                </span>
-                <div>
-                  <Portrait id="lena" />
-                </div>
-              </div>
-              <h3>Take it from here.</h3>
+              <CalendarHeart size={28} />
+              <h3>Real date ideas</h3>
               <p>
-                When the interest is mutual, a conversation opens. What happens
-                next is beautifully human.
+                Verified cafés, parks, concerts and museums in Astana and
+                Almaty, matched to the times you’re both free.
               </p>
             </article>
           </div>
         </section>
-        <section
-          id="the-difference"
-          className="difference-section section-wrap"
-        >
-          <div>
-            <span className="eyebrow">CURIOSITY, WITH CARE</span>
-            <h2>
-              Good introductions
-              <br />
-              ask better <em>questions.</em>
+
+        <section className="lp-showcase" aria-labelledby="showcase-title">
+          <div className="lp-showcase-copy">
+            <span className="eyebrow">Curiosity, with consent</span>
+            <h2 id="showcase-title">
+              Good introductions ask better <em>questions.</em>
             </h2>
             <p>
-              Shared interests are a beginning. But what about the things a
-              profile hasn’t told you yet?
-            </p>
-            <p>
-              Piper notices the gaps that matter, asks permission to explore
-              them, and explains what changes. No guessing. No hidden
-              compatibility promises.
+              Shared interests are a beginning. Piper notices the gaps that
+              matter, asks permission to explore them, and explains what
+              changes. Firm requirements are always checked by the matching
+              engine, never by AI.
             </p>
             <Button asChild variant="secondary">
               <Link href="/onboarding?demo=1">
@@ -226,73 +230,65 @@ export default function Home() {
               </Link>
             </Button>
           </div>
-          <div className="investigation-preview">
-            <span className="badge sage">
-              <Sparkles size={13} /> THE PIPER DIFFERENCE
-            </span>
-            <h3>
-              One thoughtful question
-              <br />
-              can change the conversation.
-            </h3>
-            <div className="fact-row">
-              <Check size={18} />
-              <span>You’ve shared that you want children.</span>
+          <div
+            className="lp-chat"
+            aria-label="Illustrative matchmaker exchange with fictional people"
+          >
+            <div className="lp-chat-msg side-a">
+              <span>Jamie’s AI</span>
+              <p>
+                Both enjoy hiking and live music, and both want a long-term
+                relationship. Has Lena shared her family plans?
+              </p>
             </div>
-            <div className="fact-row">
-              <MessageCircle size={18} />
-              <span>Lena hasn’t shared her family plans yet.</span>
+            <div className="lp-chat-msg side-b">
+              <span>Lena’s AI</span>
+              <p>Not yet. That stays unknown until Lena chooses to share it.</p>
             </div>
-            <div className="preview-question">
-              “Would you feel comfortable sharing how you think about having
-              children?”
+            <div className="lp-chat-note">
+              <ShieldCheck size={16} /> Asked with permission. Shared only with
+              consent. Illustrative scenario.
             </div>
-            <p>
-              <ShieldCheck size={15} /> Asked with permission. Shared only with
-              consent.
-            </p>
-            <small>Illustrative scenario with fictional people.</small>
           </div>
         </section>
-        <section id="your-pace" className="privacy-section section-wrap">
-          <ShieldCheck size={35} />
-          <span className="eyebrow">YOUR STORY. YOUR SAY.</span>
+
+        <section id="safety" className="lp-safety">
+          <ShieldCheck size={30} />
           <h2>
-            More connection.
-            <br />
-            <em>On your terms.</em>
+            More connection. <em>On your terms.</em>
           </h2>
-          <div className="privacy-points">
-            <p>
-              <Check size={16} /> Review every detail before sharing
-            </p>
-            <p>
+          <ul>
+            <li>
+              <Check size={16} /> Review every detail before it’s shared
+            </li>
+            <li>
+              <Check size={16} /> Your interview stays private
+            </li>
+            <li>
               <Check size={16} /> Skip any optional question
-            </p>
-            <p>
-              <Check size={16} /> Keep your interview private
-            </p>
-            <p>
-              <Check size={16} /> Edit, block, or leave at any time
-            </p>
-          </div>
+            </li>
+            <li>
+              <Check size={16} /> Edit, pause, block or delete at any time
+            </li>
+          </ul>
           <Link className="text-link" href="/privacy">
-            Our approach to privacy <MoveUpRight size={16} />
+            Our approach to privacy <ArrowUpRight size={15} />
           </Link>
         </section>
-        <section className="closing-section">
-          <span className="tiny-star">✳</span>
+
+        <section className="lp-cta">
           <h2>
-            Your next chapter
-            <br />
-            starts with <em>hello.</em>
+            Ready to meet someone who gets <em>you?</em>
           </h2>
-          <Button asChild size="lg">
-            <Link href="/onboarding?demo=1">
-              Say hello to Piper <ArrowUpRight size={19} />
+          <p>Let Piper introduce you to people who truly fit.</p>
+          <Button asChild size="lg" variant="outline">
+            <Link href="/onboarding">
+              Get started <ArrowUpRight size={18} />
             </Link>
           </Button>
-          <p>A fictional, interactive demo. No sign-up required. Adults 18+.</p>
+          <small>
+            A fictional, interactive demo. No sign-up required. Adults 18+.
+          </small>
         </section>
       </main>
       <footer className="landing-footer">
@@ -300,6 +296,7 @@ export default function Home() {
         <span>Thoughtful technology. Human connection.</span>
         <div>
           <Link href="/privacy">Privacy & safety</Link>
+          <Link href="/about-matching">How matching works</Link>
           <Link href="/account">Your account</Link>
           <a
             href="https://github.com/akzholkarsybek/PiedPiper"
@@ -313,6 +310,6 @@ export default function Home() {
           © {new Date().getFullYear()} Pied Piper. Hackathon edition.
         </small>
       </footer>
-    </>
+    </div>
   );
 }

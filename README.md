@@ -43,7 +43,7 @@ npm start
 
 | Capability                         | Actual behavior                                                                                                                                                                                                                              |
 | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Landing page                       | Responsive ivory/coral/sage design, original illustrated characters, working navigation                                                                                                                                                      |
+| Landing page                       | Editorial hero (“Stop swiping. Start something real.”), overlapping fictional profile cards with an AI-matchmaker insight, three-step explanation, differentiation section, safety section and final CTA; honest fictional-demo framing      |
 | Gemini interview                   | Server-side conversation, adaptive follow-ups, structured extraction, Zod validation, manual review                                                                                                                                          |
 | Guest demonstration                | No sign-in or Supabase required; 180 fictional adult profiles; local browser storage                                                                                                                                                         |
 | Profile                            | Editable biography, essentials, interests, values, lifestyle, age/gender/location preferences, hard dealbreakers                                                                                                                             |
@@ -293,6 +293,16 @@ Authentication is verified server-side with `auth.getUser()`, and RLS remains th
 
 **Locally verified, not hosted verification:** The PostgreSQL tests run the actual migration in PGlite, providing minimal Supabase `auth.users` and `auth.uid()` scaffolding. They exercise real SQL roles, grants, policies, and RPCs. They do not verify Supabase email delivery, hosted auth cookies, production concurrency behavior, or operational moderation.
 
+## UI/UX design system (redesign)
+
+The interface was redesigned from four reference mockups into a warm, profile-first dating product while keeping every flow, consent step and state transition unchanged.
+
+- **Design system** – `src/app/design-system.css` defines tokens (ivory/cream surfaces, terracotta accent, sage secondary, charcoal text, a type scale, spacing, radii, shadows) and shared primitives: buttons, cards, pills, status chips (confirmed / suggested / unknown / live / scripted / error), inputs, notices, empty/loading (skeleton) states, modal, sidebar and mobile tab bar, visible focus rings and a reduced-motion override. `src/app/screens.css` holds the screen layouts. The older `globals.css` remains as the base layer; its 7–11px text sizes were scaled up across the board for readability.
+- **Typography** – Newsreader (editorial serif, headings) and Inter (interface text) via `next/font/google`, self-hosted at build time so visitors' browsers never contact Google. The build needs network access to download them once.
+- **Portraits** – `src/components/portrait.tsx` procedurally generates original illustrated portraits from each fictional profile's id, gender and age (skin tone, hair style/colour, facial hair, glasses, earrings, clothing, background), so the 180-person population doesn't repeat one face. They are labeled as fictional and illustrated; no stock photos of real people are used.
+- **Screens** – Landing; Talk to Piper (voice/typing switch, large microphone with recording timer and waveform, editable transcript, conversation history, a “What Piper understood” panel that marks extracted values _Suggested_ or _Unknown_, never _Confirmed_ before approval, a profile preview and a review step); Discover (one featured person with prompt-style sections built only from approved fields, a small queue for the rest of the batch of three, real preference pills linking to the profile editor, and a “Why Piper introduced …” panel covering shared interests, aligned intentions, possible differences and the unresolved question); Agent Conversations (two person cards with distinct matchmaker identities, a progress row, Live / Scripted / Interrupted status, progressive turn bubbles, a structured summary column, a consent-based follow-up band and an action bar that never bypasses mutual interest); My Profile (profile hero and section navigation around the unchanged editor); My AI Matchmaker (a summary of the approved profile and a voice/typing entry point); Connections and date cards (category-tinted venue cards with verified facts and source links only).
+- **Responsive** – Sidebar navigation on desktop; a bottom tab bar and stacked layouts on tablets and phones (≤950px). Checked at 1440, 1280, 900 and 390px wide.
+
 ## Tests and checks
 
 ```bash
@@ -312,7 +322,7 @@ npm run test:e2e
   - Instagram and enrichment (11, `tests/social-enrichment.test.ts`): username validation, visibility consent, removal, never in the profile or agent context, no network requests, no Instagram access anywhere in the source, migration of older saved data, photo label filtering of personal/sensitive content, pending approval/rejection, deletion of pasted-content suggestions, photo route disabled by default.
   - Availability, dates, enrichment, Ready to Connect, persistence (21, `tests/phase2.test.ts`), now in Astana time.
   - SQL Phase 2 (5) and **SQL Phase 2.2 (5, `tests/database-phase2-2.test.ts`)**: hidden usernames unreadable even by a match, visibility and blocking, owner-only writes, username validation, venue column validation, cascade on deletion.
-- **34 browser tests** (Playwright, 17 scenarios × desktop + mobile): the original 26 checks plus voice/transcript correction through profile approval, matching, scripted agents and a confirmed demo date; unsupported recognition and typed fallback; permission-denial recovery and opt-in speech playback; three/six introduction limits, approved profile viewing, and expanded-pool persistence/migration. The existing checks cover Discover Your First Date in Astana, verified venue fields, Ticketon/OSM links, availability fit, proposals, expiry, explicit Gemini failures, diagnostics, Instagram privacy and deletion. Event-dependent tests pin the browser clock to 2026-11-14.
+- **44 browser tests** (Playwright, 22 scenarios × desktop + mobile): redesign checks (landing entry points and honest framing; voice/typing switch, Suggested/Unknown draft statuses and the approval gate; featured Discover person with queue switching and evidence sections; agent person cards, status, summary, follow-up CTA and back navigation; profile and matchmaker section navigation), the original 26 checks plus voice/transcript correction through profile approval, matching, scripted agents and a confirmed demo date; unsupported recognition and typed fallback; permission-denial recovery and opt-in speech playback; three/six introduction limits, approved profile viewing, and expanded-pool persistence/migration. The existing checks cover Discover Your First Date in Astana, verified venue fields, Ticketon/OSM links, availability fit, proposals, expiry, explicit Gemini failures, diagnostics, Instagram privacy and deletion. Event-dependent tests pin the browser clock to 2026-11-14.
 - **Live provider checks** (2026-11-14): see _Live verification_ above.
 - Production build, TypeScript, and ESLint pass.
 
@@ -370,6 +380,9 @@ src/app/                  App Router pages and API handlers
 src/components/           Landing, interview, profile editor, introductions, messaging,
                           agents (AI Matchmakers), date-planner, availability-editor, matchmaker hub
 src/components/ui/        Locally owned shadcn-style Radix/CVA Button
+src/components/portrait.tsx  Procedural illustrated portraits for fictional profiles
+src/app/design-system.css Design tokens and shared UI primitives
+src/app/screens.css       Screen layouts (landing, onboarding, discover, agents, profile, connections)
 src/lib/agents.ts         Approved contexts, planner, bounded orchestrator, verification, scripted brain
 src/lib/gemini-health.ts  Error classification, short-lived cooldowns, non-sensitive status
 src/lib/activities.ts     The four discovery groups and interest → group mapping
@@ -394,7 +407,7 @@ tests/                    Matching, store, SQL authorization, browser journeys
 scripts/                  Fictional AI smoke checks and tracked-file secret scan
 ```
 
-The stack is Next.js App Router, React, TypeScript, Tailwind CSS 4, shadcn-compatible locally owned components, Radix Slot, Lucide, Motion, Zod, Google Gen AI, and Supabase. Original vector portraits avoid representing real people as fictional dating profiles. Fonts use local system serif/sans fallbacks, so the build has no external font-download dependency.
+The stack is Next.js App Router, React, TypeScript, Tailwind CSS 4, shadcn-compatible locally owned components, Radix Slot, Lucide, Motion, Zod, Google Gen AI, and Supabase. Original procedurally generated vector portraits avoid representing real people as fictional dating profiles. Fonts (Newsreader and Inter) are self-hosted by `next/font` at build time.
 
 ## Before public launch
 

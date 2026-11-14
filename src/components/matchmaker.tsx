@@ -13,7 +13,12 @@ import {
   Sparkles,
   Trash2,
   X,
+  Mic,
+  Keyboard,
+  CalendarClock,
+  UserRound,
 } from "lucide-react";
+import { title } from "@/lib/profile";
 import { AppShell, NoProfile } from "./app-shell";
 import { PiperMark } from "./brand";
 import { Button } from "./ui/button";
@@ -61,10 +66,52 @@ export function Matchmaker() {
             Piper knows, and what you’ve allowed it to share.
           </p>
         </div>
-        <Link href="/onboarding?demo=1" className="preference-link">
-          <PiperMark /> Talk to Piper again
-        </Link>
       </div>
+      <section className="mm-hero" aria-label="Your matchmaker">
+        <div className="mm-hero-agent">
+          <span className="mm-avatar">
+            <PiperMark />
+          </span>
+          <div>
+            <strong>Piper for {profile.name}</strong>
+            <small>Your AI matchmaker · fictional demo</small>
+          </div>
+        </div>
+        <div className="mm-bubble">
+          <p>
+            I’m looking for people
+            {profile.preferences.locationMode === "local" && profile.city
+              ? ` near ${profile.city}`
+              : ""}{" "}
+            who want {title(profile.intent).toLowerCase()}
+            {profile.interests.length
+              ? `, and who might share ${profile.interests.slice(0, 3).join(", ")}`
+              : ""}
+            . Your interview stays private; I only use what you approved.
+          </p>
+          <small>Summary of your approved profile · not AI-generated</small>
+        </div>
+        <div className="mm-actions">
+          <Link href="/onboarding?demo=1" className="button button-primary">
+            <Mic size={17} /> Talk to Piper again
+          </Link>
+          <span className="mm-modes">
+            <Mic size={14} /> Voice <span aria-hidden="true">·</span>
+            <Keyboard size={14} /> Typing, your choice each time
+          </span>
+          <nav className="mm-jump" aria-label="On this page">
+            <a href="#availability">
+              <CalendarClock size={15} /> Availability
+            </a>
+            <a href="#enrichment">
+              <Sparkles size={15} /> Interest suggestions
+            </a>
+            <Link href="/profile">
+              <UserRound size={15} /> Edit profile
+            </Link>
+          </nav>
+        </div>
+      </section>
       <Journey state={state} />
       {notice && (
         <div role="status" className="notice success-notice dismiss-notice">
@@ -110,7 +157,7 @@ export function Matchmaker() {
           {ready ? "On" : "Paused"}
         </button>
       </section>
-      <section className="matchmaker-section">
+      <section className="matchmaker-section" id="availability">
         <div className="section-intro">
           <h2>
             When you’re free, <em>roughly.</em>
@@ -312,6 +359,7 @@ function Enrichment({ state }: { state: DemoState }) {
   }
   return (
     <section
+      id="enrichment"
       className="matchmaker-section enrichment"
       aria-labelledby="enrich-title"
     >

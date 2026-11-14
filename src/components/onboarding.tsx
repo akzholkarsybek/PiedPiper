@@ -4,16 +4,29 @@ import { useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
+  ArrowUpRight,
+  Ban,
+  CalendarDays,
   Check,
-  Send,
-  Sparkles,
-  ShieldCheck,
-  RotateCcw,
+  CircleHelp,
+  Heart,
+  Keyboard,
+  Leaf,
   LoaderCircle,
+  MapPin,
+  Mic,
+  Pencil,
+  RotateCcw,
+  Send,
+  ShieldCheck,
+  Sparkles,
+  UserRound,
+  UsersRound,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Brand, PiperMark } from "./brand";
 import { Button } from "./ui/button";
+import { Portrait } from "./portrait";
 import { ProfileEditor } from "./profile-editor";
 import { VoiceInput } from "./voice-input";
 import {
@@ -22,7 +35,14 @@ import {
   preferenceLabels,
   type MissingPreference,
 } from "@/lib/onboarding";
-import { blankProfile, type Profile, requiredMissing } from "@/lib/profile";
+import {
+  attributeLabel,
+  blankProfile,
+  dimensionKeys,
+  type Profile,
+  requiredMissing,
+  title,
+} from "@/lib/profile";
 import { sampleProfile, starterMessages } from "@/lib/fixtures";
 import { dispatchDemo } from "@/lib/demo-store";
 import {
@@ -35,6 +55,8 @@ const welcome: InterviewMessage = {
   content:
     "Hi, I’m Piper. Let’s start with you, not a checklist. What should I call you, where do you call home, and what kind of connection are you hoping to find?",
 };
+const STEPS = ["Talk to Piper", "Review your profile", "Meet introductions"];
+
 export function Onboarding({ demoEntry = false }: { demoEntry?: boolean }) {
   const router = useRouter();
   const [stage, setStage] = useState<"welcome" | "interview" | "review">(
@@ -50,6 +72,7 @@ export function Onboarding({ demoEntry = false }: { demoEntry?: boolean }) {
   const [draft, setDraft] = useState<Profile>(blankProfile()),
     [presetStep, setPresetStep] = useState(0),
     [providerNotice, setProviderNotice] = useState("");
+  const [inputMode, setInputMode] = useState<"voice" | "text">("voice");
   const bottom = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const [recording, setRecording] = useState(false),
@@ -156,54 +179,96 @@ export function Onboarding({ demoEntry = false }: { demoEntry?: boolean }) {
   }
   const ready =
     !requiredMissing(draft).length && missingPreferences.length === 0;
+  const stepIndex = stage === "review" ? 1 : 0;
+  const clarify = [
+    ...requiredMissing(draft),
+    ...missingPreferences.map((key) => preferenceLabels[key]),
+  ];
   return (
-    <div className="onboarding-page">
-      <header className="flow-nav">
+    <div className="onboarding-page ob-page">
+      <header className="flow-nav ob-nav">
         <Brand />
-        <Link className="text-link" href="/">
-          Back to home <ArrowLeft size={15} />
-        </Link>
-      </header>
-      <main id="main" className="onboarding-layout">
-        <aside className="onboarding-aside">
-          <span className="eyebrow">YOUR NEXT CHAPTER</span>
-          <h1>
-            A good beginning
-            <br />
-            starts with
-            <br />
-            <em>being you.</em>
-          </h1>
-          <p>
-            A little about your world.
-            <br />A little about who fits in it.
-          </p>
-          <ol className="flow-steps">
-            {[
-              "A conversation, not a form",
-              "A profile that feels like you",
-              "A thoughtful introduction",
-            ].map((s, i) => (
+        <div className="ob-progress" aria-label="Onboarding progress">
+          <span>
+            Onboarding · <strong>{STEPS[stepIndex]}</strong>
+          </span>
+          <ol>
+            {STEPS.map((s, i) => (
               <li
                 key={s}
-                className={(stage === "review" ? 1 : 0) === i ? "active" : ""}
+                className={
+                  i < stepIndex ? "done" : i === stepIndex ? "current" : ""
+                }
+                aria-current={i === stepIndex ? "step" : undefined}
               >
-                <span>{i + 1}</span>
-                {s}
+                <span className="sr-only">{s}</span>
               </li>
             ))}
           </ol>
-          <div className="aside-privacy">
-            <ShieldCheck size={22} />
-            <p>
-              Nothing is shared until you say so. Your interview stays private.
-            </p>
-          </div>
-          <span className="aside-flower">✳</span>
-        </aside>
-        <section className="onboarding-main">
-          {stage === "welcome" ? (
-            <div className="welcome-panel">
+        </div>
+        <Link className="text-link ob-home" href="/">
+          <ArrowLeft size={15} /> Home
+        </Link>
+      </header>
+      <main id="main" className="ob-main">
+        {stage === "welcome" ? (
+          <div className="ob-welcome">
+            <div className="ob-intro">
+              <span className="eyebrow">
+                <span className="eyebrow-star" aria-hidden="true">
+                  ✳
+                </span>
+                Talk to Piper
+              </span>
+              <h1>
+                Tell Piper about <em>yourself.</em>
+              </h1>
+              <p className="ob-lede">
+                Have a natural conversation about your life, what you’re looking
+                for and what matters to you. Piper turns it into a draft
+                profile, and you approve every detail before it’s used for
+                matching.
+              </p>
+              <ol className="ob-how">
+                <li>
+                  <span>
+                    <Mic size={18} />
+                  </span>
+                  <div>
+                    <strong>Speak or type</strong>
+                    <p>
+                      Use your voice or the keyboard. You can correct the
+                      transcript before anything is sent.
+                    </p>
+                  </div>
+                </li>
+                <li>
+                  <span>
+                    <Sparkles size={18} />
+                  </span>
+                  <div>
+                    <strong>Piper drafts, you decide</strong>
+                    <p>
+                      After each message Piper suggests profile details and asks
+                      about anything important that’s missing.
+                    </p>
+                  </div>
+                </li>
+                <li>
+                  <span>
+                    <ShieldCheck size={18} />
+                  </span>
+                  <div>
+                    <strong>Nothing shared without approval</strong>
+                    <p>
+                      Your interview stays private. Only the approved profile is
+                      used.
+                    </p>
+                  </div>
+                </li>
+              </ol>
+            </div>
+            <div className="ob-consent">
               <span className="badge sage">
                 <Sparkles size={13} />{" "}
                 {demoEntry ? "THE INTERACTIVE DEMO" : "MEET YOUR MATCHMAKER"}
@@ -258,286 +323,523 @@ export function Onboarding({ demoEntry = false }: { demoEntry?: boolean }) {
                 Gemini.
               </small>
               <Link href="/account" className="text-link">
-                Looking for a real account? <ArrowUpRightIcon />
+                Looking for a real account? <ArrowUpRight size={14} />
               </Link>
             </div>
-          ) : stage === "review" ? (
-            <div className="review-panel">
-              <button
-                className="text-link"
-                onClick={() => setStage("interview")}
-              >
-                <ArrowLeft size={15} />
-                Back to our conversation
-              </button>
-              <span className="eyebrow">THE FINAL SAY IS YOURS</span>
-              <h2>
-                Does this sound <em>like you?</em>
-              </h2>
-              <p className="muted">
-                {mode === "predefined"
-                  ? "A predefined fictional profile, ready for your review."
-                  : "A Gemini-generated draft. Please correct anything that doesn’t reflect what you said."}
-              </p>
-              {interpretations.length > 0 && (
-                <div className="notice">
-                  <div>
-                    <strong>
-                      AI-proposed interpretations · not used for matching
-                    </strong>
-                    <ul>
-                      {interpretations.map((text, i) => (
-                        <li key={i}>{text}</li>
-                      ))}
-                    </ul>
-                    <p>
-                      Only add an interpretation to your profile if you agree
-                      with it. Otherwise leave it out.
-                    </p>
-                  </div>
-                </div>
-              )}
-              <ProfileEditor
-                missingPreferences={missingPreferences}
-                profile={draft}
-                onSave={(p) => {
-                  dispatchDemo({ type: "profile", profile: p });
-                  router.push("/discover");
-                }}
-              />
-            </div>
-          ) : (
-            <div className="conversation-panel">
-              <div className="conversation-header">
-                <PiperMark />
+          </div>
+        ) : stage === "review" ? (
+          <div className="review-panel ob-review">
+            <button className="text-link" onClick={() => setStage("interview")}>
+              <ArrowLeft size={15} />
+              Back to our conversation
+            </button>
+            <span className="eyebrow">THE FINAL SAY IS YOURS</span>
+            <h2>
+              Does this sound <em>like you?</em>
+            </h2>
+            <p className="muted">
+              {mode === "predefined"
+                ? "A predefined fictional profile, ready for your review."
+                : "A Gemini-generated draft. Please correct anything that doesn’t reflect what you said."}{" "}
+              Nothing is confirmed or used for matching until you approve it.
+            </p>
+            {interpretations.length > 0 && (
+              <div className="notice">
                 <div>
-                  <strong>Piper</strong>
-                  <span>
-                    <span className="status-dot" />
-                    {mode === "gemini"
-                      ? "Gemini-powered matchmaker"
-                      : "Predefined demonstration · scripted"}
-                  </span>
+                  <strong>
+                    AI-proposed interpretations · not used for matching
+                  </strong>
+                  <ul>
+                    {interpretations.map((text, i) => (
+                      <li key={i}>{text}</li>
+                    ))}
+                  </ul>
+                  <p>
+                    Only add an interpretation to your profile if you agree with
+                    it. Otherwise leave it out.
+                  </p>
                 </div>
-                <button
-                  aria-label="Start interview over"
-                  className="icon-button"
-                  disabled={busy}
-                  onClick={clearSession}
-                >
-                  <RotateCcw size={17} />
-                </button>
               </div>
-              <div className="conversation-messages" aria-live="polite">
-                {messages.map((message, i) => (
+            )}
+            <ProfileEditor
+              missingPreferences={missingPreferences}
+              profile={draft}
+              onSave={(p) => {
+                dispatchDemo({ type: "profile", profile: p });
+                router.push("/discover");
+              }}
+            />
+          </div>
+        ) : (
+          <div className="ob-interview">
+            <div className="ob-columns">
+              <section className="ob-left" aria-label="Conversation with Piper">
+                <span className="eyebrow">
+                  <span className="eyebrow-star" aria-hidden="true">
+                    ✳
+                  </span>
+                  Talk to Piper
+                </span>
+                <h1>
+                  Tell Piper about <em>yourself.</em>
+                </h1>
+                <p className="ob-lede">
+                  {mode === "predefined"
+                    ? "A scripted walkthrough with Jamie, a fictional Astana resident. Send the sample messages to see how a profile takes shape."
+                    : "Talk naturally about your life, what you’re looking for and what matters to you. Review the transcript, then send it to Piper."}
+                </p>
+                {mode === "gemini" && (
                   <div
-                    key={i}
-                    className={`conversation-message ${message.role === "user" ? "from-user" : "from-piper"}`}
+                    className="ob-switch"
+                    role="group"
+                    aria-label="How would you like to answer?"
                   >
-                    {message.role === "assistant" && <PiperMark />}
-                    <div>
-                      <span>
-                        {message.role === "user"
-                          ? "YOU"
-                          : mode === "predefined"
-                            ? "PIPER · SCRIPTED"
-                            : "PIPER"}
-                      </span>
-                      <p>{message.content}</p>
-                    </div>
-                  </div>
-                ))}
-                {busy && (
-                  <div className="typing">
-                    <LoaderCircle size={16} className="spin" /> Piper is
-                    listening and thinking…
+                    <button
+                      type="button"
+                      className={inputMode === "voice" ? "active" : ""}
+                      aria-pressed={inputMode === "voice"}
+                      disabled={recording}
+                      onClick={() => setInputMode("voice")}
+                    >
+                      <Mic size={17} /> Use voice
+                    </button>
+                    <button
+                      type="button"
+                      className={inputMode === "text" ? "active" : ""}
+                      aria-pressed={inputMode === "text"}
+                      disabled={recording}
+                      onClick={() => setInputMode("text")}
+                    >
+                      <Keyboard size={17} /> Switch to typing
+                    </button>
                   </div>
                 )}
-                <div ref={bottom} />
-              </div>
-              {providerNotice && mode === "gemini" && (
-                <div className="provider-notice" role="status">
-                  {providerNotice}
-                </div>
-              )}
-              {error && (
-                <div
-                  className="conversation-error notice error-notice"
-                  role="alert"
-                >
-                  <div>
-                    <strong>We couldn’t reach the next step.</strong>
-                    <p>{error}</p>
-                    <div className="inline-actions">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={busy}
-                        onClick={() => void send("retry", true)}
-                      >
-                        Retry Gemini
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={usePredefined}
-                      >
-                        Use predefined demo
-                      </Button>
+                {mode === "gemini" && inputMode === "voice" && (
+                  <VoiceInput
+                    value={input}
+                    onChange={setInput}
+                    onRecordingChange={setRecording}
+                    disabled={busy || messages.length >= 29}
+                    reply={
+                      messages.findLast((m) => m.role === "assistant")
+                        ?.content ?? ""
+                    }
+                  />
+                )}
+                <div className="conversation-panel ob-chat">
+                  <div className="conversation-header">
+                    <PiperMark />
+                    <div>
+                      <strong>Piper</strong>
+                      <span>
+                        <span className="status-dot" />
+                        {mode === "gemini"
+                          ? "Gemini-powered matchmaker"
+                          : "Predefined demonstration · scripted"}
+                      </span>
                     </div>
-                  </div>
-                </div>
-              )}
-              <div className="conversation-composer">
-                {mode === "predefined" ? (
-                  presetStep < 2 ? (
-                    <Button onClick={nextPreset}>
-                      Send fictional sample {presetStep + 1}{" "}
-                      <ArrowRight size={16} />
-                    </Button>
-                  ) : (
-                    <p className="ready-hint">
-                      <Check size={16} /> Your predefined profile is ready to
-                      review.
-                    </p>
-                  )
-                ) : (
-                  <>
-                    <VoiceInput
-                      value={input}
-                      onChange={setInput}
-                      onRecordingChange={setRecording}
-                      disabled={busy || messages.length >= 29}
-                      reply={
-                        messages.findLast((m) => m.role === "assistant")
-                          ?.content ?? ""
-                      }
-                    />
-                    <p className="transcript-label">
-                      Review or correct your transcript, or type a response:
-                    </p>
-                    <div className="sample-prompts">
-                      {messages.length < 3 && (
-                        <button
-                          disabled={busy}
-                          onClick={() => void send(starterMessages[0])}
-                        >
-                          Use fictional details: Jamie, 32, Astana{" "}
-                          <ArrowUpRightIcon />
-                        </button>
-                      )}
-                      {messages.length >= 3 && !ready && (
-                        <button
-                          disabled={busy}
-                          onClick={() => void send(starterMessages[1])}
-                        >
-                          Add Jamie’s sample interests & preferences{" "}
-                          <ArrowUpRightIcon />
-                        </button>
-                      )}
-                    </div>
-                    <form
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        void send();
-                      }}
-                    >
-                      <textarea
-                        aria-label="Message to Piper"
-                        placeholder="A little about you…"
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        maxLength={2500}
-                        rows={2}
-                        disabled={busy || recording || messages.length >= 29}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" && !e.shiftKey) {
-                            e.preventDefault();
-                            void send();
-                          }
-                        }}
-                      />
-                      <Button
-                        size="icon"
-                        type="submit"
-                        aria-label="Send message to Piper"
-                        disabled={
-                          busy ||
-                          recording ||
-                          !input.trim() ||
-                          messages.length >= 29
-                        }
-                      >
-                        <Send size={18} />
-                      </Button>
-                    </form>
-                    <small>
-                      {messages.length >= 29
-                        ? "Interview limit reached. Review your draft or restart."
-                        : "Enter to send · Shift + Enter for a new line · Fictional details only"}
-                    </small>
-                    <div className="draft-progress" aria-live="polite">
-                      <strong>
-                        Draft from your reviewed messages · awaiting profile
-                        approval
-                      </strong>
-                      <p>
-                        {[
-                          draft.name,
-                          draft.age && `${draft.age}`,
-                          draft.city,
-                          draft.intent?.replaceAll("-", " "),
-                        ]
-                          .filter(Boolean)
-                          .join(" · ") || "No profile facts extracted yet."}
-                      </p>
-                      {draft.interests.length > 0 && (
-                        <p>Interests: {draft.interests.join(", ")}</p>
-                      )}
-                      <small>
-                        Missing:{" "}
-                        {[
-                          ...requiredMissing(draft),
-                          ...missingPreferences.map(
-                            (key) => preferenceLabels[key],
-                          ),
-                        ].join(", ") ||
-                          "Essentials collected; review before sharing."}
-                      </small>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
+                    <button
+                      aria-label="Start interview over"
+                      className="icon-button"
+                      disabled={busy}
                       onClick={clearSession}
                     >
-                      Clear & delete interview session
-                    </Button>
-                  </>
+                      <RotateCcw size={17} />
+                    </button>
+                  </div>
+                  <div className="conversation-messages" aria-live="polite">
+                    {messages.map((message, i) => (
+                      <div
+                        key={i}
+                        className={`conversation-message ${message.role === "user" ? "from-user" : "from-piper"}`}
+                      >
+                        {message.role === "assistant" && <PiperMark />}
+                        <div>
+                          <span>
+                            {message.role === "user"
+                              ? "YOU"
+                              : mode === "predefined"
+                                ? "PIPER · SCRIPTED"
+                                : "PIPER"}
+                          </span>
+                          <p>{message.content}</p>
+                        </div>
+                      </div>
+                    ))}
+                    {busy && (
+                      <div className="typing">
+                        <LoaderCircle size={16} className="spin" /> Piper is
+                        reading your message and updating your draft…
+                      </div>
+                    )}
+                    <div ref={bottom} />
+                  </div>
+                  {providerNotice && mode === "gemini" && (
+                    <div className="provider-notice" role="status">
+                      {providerNotice}
+                    </div>
+                  )}
+                  {error && (
+                    <div
+                      className="conversation-error notice error-notice"
+                      role="alert"
+                    >
+                      <div>
+                        <strong>We couldn’t reach the next step.</strong>
+                        <p>{error}</p>
+                        <div className="inline-actions">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={busy}
+                            onClick={() => void send("retry", true)}
+                          >
+                            Retry Gemini
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={usePredefined}
+                          >
+                            Use predefined demo
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  <div className="conversation-composer">
+                    {mode === "predefined" ? (
+                      presetStep < 2 ? (
+                        <Button onClick={nextPreset}>
+                          Send fictional sample {presetStep + 1}{" "}
+                          <ArrowRight size={16} />
+                        </Button>
+                      ) : (
+                        <p className="ready-hint">
+                          <Check size={16} /> Your predefined profile is ready
+                          to review.
+                        </p>
+                      )
+                    ) : (
+                      <>
+                        <p className="transcript-label">
+                          {inputMode === "voice"
+                            ? "Your transcript appears here. Review or correct it, then send:"
+                            : "Type your answer to Piper:"}
+                        </p>
+                        <form
+                          onSubmit={(e) => {
+                            e.preventDefault();
+                            void send();
+                          }}
+                        >
+                          <textarea
+                            aria-label="Message to Piper"
+                            placeholder="A little about you…"
+                            value={input}
+                            onChange={(e) => setInput(e.target.value)}
+                            maxLength={2500}
+                            rows={3}
+                            disabled={
+                              busy || recording || messages.length >= 29
+                            }
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && !e.shiftKey) {
+                                e.preventDefault();
+                                void send();
+                              }
+                            }}
+                          />
+                          <Button
+                            size="icon"
+                            type="submit"
+                            aria-label="Send message to Piper"
+                            disabled={
+                              busy ||
+                              recording ||
+                              !input.trim() ||
+                              messages.length >= 29
+                            }
+                          >
+                            <Send size={18} />
+                          </Button>
+                        </form>
+                        <small>
+                          {messages.length >= 29
+                            ? "Interview limit reached. Review your draft or restart."
+                            : "Enter to send · Shift + Enter for a new line · Fictional details only"}
+                        </small>
+                        <div className="sample-prompts">
+                          {messages.length < 3 && (
+                            <button
+                              disabled={busy}
+                              onClick={() => void send(starterMessages[0])}
+                            >
+                              Use fictional details: Jamie, 32, Astana{" "}
+                              <ArrowRight size={14} />
+                            </button>
+                          )}
+                          {messages.length >= 3 && !ready && (
+                            <button
+                              disabled={busy}
+                              onClick={() => void send(starterMessages[1])}
+                            >
+                              Add Jamie’s sample interests & preferences{" "}
+                              <ArrowRight size={14} />
+                            </button>
+                          )}
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={clearSession}
+                        >
+                          Clear & delete interview session
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </section>
+
+              <aside
+                className="ob-right"
+                aria-label="What Piper has understood"
+              >
+                <Understanding
+                  draft={draft}
+                  busy={busy}
+                  mode={mode}
+                  missingPreferences={missingPreferences}
+                />
+                {clarify.length > 0 && (
+                  <div className="ob-clarify">
+                    <CircleHelp size={18} />
+                    <p>
+                      <strong>Worth clarifying:</strong> {clarify.join(", ")}.{" "}
+                      <span>You can also fill these in during review.</span>
+                    </p>
+                  </div>
                 )}
-                <div className="review-action">
-                  <span>
-                    {ready
-                      ? "A thoughtful starting point is ready."
-                      : "You can fill in unknown details during review."}
-                  </span>
-                  <Button
-                    variant={ready ? "default" : "outline"}
-                    size="sm"
+              </aside>
+            </div>
+
+            <section className="ob-preview" aria-label="Your profile preview">
+              <div className="ob-preview-photo">
+                <Portrait
+                  id={draft.name.trim().toLowerCase() || "guest"}
+                  gender={draft.gender}
+                  age={draft.age}
+                  label="Illustrated placeholder avatar for a fictional demo profile"
+                />
+              </div>
+              <div className="ob-preview-intro">
+                <span className="eyebrow">Your profile preview · draft</span>
+                <h2>
+                  {draft.name ? `${draft.name}’s intro` : "Your intro"}
+                  <button
+                    type="button"
+                    className="icon-button"
+                    aria-label="Edit your draft in review"
                     disabled={busy || recording}
                     onClick={() => setStage("review")}
                   >
-                    Review my profile <ArrowRight size={15} />
-                  </Button>
-                </div>
+                    <Pencil size={17} />
+                  </button>
+                </h2>
+                <p className={draft.bio ? "" : "muted"}>
+                  {draft.bio ||
+                    "Your short introduction appears here once you’ve shared a little about yourself. You can rewrite it during review."}
+                </p>
               </div>
+              <div className="ob-glance">
+                <h3>At a glance</h3>
+                <div className="ob-chips">
+                  {draft.age && (
+                    <span>
+                      <CalendarDays size={14} /> {draft.age}
+                    </span>
+                  )}
+                  {draft.city && (
+                    <span>
+                      <MapPin size={14} /> {draft.city}
+                    </span>
+                  )}
+                  {draft.intent && (
+                    <span>
+                      <Heart size={14} /> {title(draft.intent)}
+                    </span>
+                  )}
+                  {draft.interests.slice(0, 6).map((t) => (
+                    <span key={t}>
+                      <Leaf size={14} /> {title(t)}
+                    </span>
+                  ))}
+                  {!draft.age && !draft.city && !draft.interests.length && (
+                    <span className="empty">Nothing yet</span>
+                  )}
+                </div>
+                <ul className="ob-legend" aria-label="Status legend">
+                  <li>
+                    <span className="status-chip is-confirmed">
+                      <Check size={12} /> Confirmed
+                    </span>
+                    After you approve your profile
+                  </li>
+                  <li>
+                    <span className="status-chip is-suggested">
+                      <Sparkles size={12} /> Suggested
+                    </span>
+                    Drafted from your messages
+                  </li>
+                  <li>
+                    <span className="status-chip is-unknown">? Unknown</span>
+                    Not shared yet
+                  </li>
+                </ul>
+              </div>
+            </section>
+
+            <div className="review-action ob-actions">
+              <span>
+                {ready
+                  ? "A thoughtful starting point is ready."
+                  : "You can fill in unknown details during review."}
+              </span>
+              <Button
+                variant={ready ? "default" : "outline"}
+                size="lg"
+                disabled={busy || recording}
+                onClick={() => setStage("review")}
+              >
+                Review my profile <ArrowRight size={17} />
+              </Button>
             </div>
-          )}
-        </section>
+          </div>
+        )}
       </main>
     </div>
   );
 }
-function ArrowUpRightIcon() {
-  return <ArrowRight size={14} />;
+
+function Understanding({
+  draft,
+  busy,
+  mode,
+  missingPreferences,
+}: {
+  draft: Profile;
+  busy: boolean;
+  mode: "gemini" | "predefined";
+  missingPreferences: MissingPreference[];
+}) {
+  const prefs = draft.preferences;
+  const hasRange =
+    !missingPreferences.includes("minAge") &&
+    !missingPreferences.includes("maxAge") &&
+    !(prefs.minAge === 18 && prefs.maxAge === 100);
+  const partner = [
+    prefs.genders.length
+      ? prefs.genders
+          .map((g) =>
+            g === "woman" ? "women" : g === "man" ? "men" : "non-binary people",
+          )
+          .join(" and ")
+      : "",
+    hasRange ? `ages ${prefs.minAge}–${prefs.maxAge}` : "",
+    !missingPreferences.includes("locationMode")
+      ? prefs.locationMode === "local"
+        ? "nearby"
+        : "anywhere"
+      : "",
+  ]
+    .filter(Boolean)
+    .join(", ");
+  const lifestyle = dimensionKeys
+    .filter((d) => draft.attributes[d])
+    .map((d) => attributeLabel(d, draft.attributes[d]));
+  const dealbreakers = prefs.hard
+    .filter((d) => prefs.desired[d])
+    .map(
+      (d) => `Partner: ${attributeLabel(d, prefs.desired[d]).toLowerCase()}`,
+    );
+  const rows: {
+    icon: typeof UserRound;
+    label: string;
+    value: string;
+  }[] = [
+    {
+      icon: UserRound,
+      label: "Name & age",
+      value: [draft.name, draft.age].filter(Boolean).join(", "),
+    },
+    { icon: MapPin, label: "City", value: draft.city },
+    {
+      icon: Heart,
+      label: "Relationship intention",
+      value: draft.intent ? title(draft.intent) : "",
+    },
+    {
+      icon: Leaf,
+      label: "Interests",
+      value: draft.interests.map(title).join(", "),
+    },
+    {
+      icon: Sparkles,
+      label: "Values",
+      value: draft.values.map(title).join(", "),
+    },
+    { icon: UsersRound, label: "Ideal partner", value: partner },
+    { icon: CalendarDays, label: "Lifestyle", value: lifestyle.join(", ") },
+    { icon: Ban, label: "Dealbreakers", value: dealbreakers.join("; ") },
+  ];
+  return (
+    <div className="ob-understand">
+      <header>
+        <span className="ob-understand-mark">
+          <PiperMark />
+        </span>
+        <div>
+          <h2>
+            {busy ? "Piper is understanding you…" : "What Piper understood"}
+          </h2>
+          <p>
+            {mode === "predefined"
+              ? "Scripted sample profile. Nothing here is AI-generated."
+              : "Updated after each message you send. Nothing is confirmed until you approve it."}
+          </p>
+        </div>
+        <span className={`status-chip ${busy ? "is-live" : "is-unknown"}`}>
+          {busy ? (
+            <>
+              <LoaderCircle size={12} className="spin" /> Updating
+            </>
+          ) : (
+            "Draft"
+          )}
+        </span>
+      </header>
+      <ul aria-live="polite">
+        {rows.map((r) => (
+          <li key={r.label}>
+            <span className="ob-row-icon">
+              <r.icon size={18} />
+            </span>
+            <strong>{r.label}</strong>
+            <span className={`ob-row-value ${r.value ? "" : "empty"}`}>
+              {r.value || "Not shared yet"}
+            </span>
+            {r.value ? (
+              <span className="status-chip is-suggested">
+                <Sparkles size={12} /> Suggested
+              </span>
+            ) : (
+              <span className="status-chip is-unknown">? Unknown</span>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }

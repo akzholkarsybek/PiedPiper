@@ -100,7 +100,7 @@ export function Connections({
                 }}
               >
                 <div className="avatar-portrait">
-                  <Portrait id={p.id} />
+                  <Portrait id={p.id} gender={p.gender} age={p.age} />
                 </div>
                 <span>
                   <strong>{p.name}</strong>
@@ -113,7 +113,7 @@ export function Connections({
           <section className="message-thread">
             <header>
               <div className="avatar-portrait">
-                <Portrait id={peer.id} />
+                <Portrait id={peer.id} gender={peer.gender} age={peer.age} />
               </div>
               <div>
                 <h2>{peer.name}</h2>

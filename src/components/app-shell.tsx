@@ -2,77 +2,127 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Heart,
-  MessageCircle,
-  SlidersHorizontal,
-  ShieldCheck,
   ArrowUpRight,
-  Sparkles,
   Bot,
+  CircleUserRound,
+  MessageCircle,
   MessagesSquare,
+  Search,
+  ShieldCheck,
 } from "lucide-react";
 import { Brand, PiperMark } from "./brand";
-import { useDemo, getStorageError } from "@/lib/demo-store";
+import { Portrait } from "./portrait";
+import { useDemo, getStorageError, matched } from "@/lib/demo-store";
 import { Button } from "./ui/button";
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const path = usePathname(),
     state = useDemo();
+  const connections = state.candidates.filter(
+    (c) => !state.profile?.blockedIds.includes(c.id) && matched(state, c.id),
+  ).length;
+  // The most recent saved matchmaker conversation (real state, not decoration).
+  const latest = Object.values(state.agentSessions)
+    .filter((s) => !state.profile?.blockedIds.includes(s.peerId))
+    .sort((a, b) => b.completedAt.localeCompare(a.completedAt))[0];
+  const latestPeer =
+    latest && state.candidates.find((c) => c.id === latest.peerId);
   const nav = [
     {
       href: "/matchmaker",
       label: "My AI Matchmaker",
+      hint: "Your personal dating AI",
       short: "Matchmaker",
       icon: Bot,
     },
-    { href: "/discover", label: "Discover", short: "Discover", icon: Sparkles },
+    {
+      href: "/discover",
+      label: "Discover",
+      hint: "Curated people for you",
+      short: "Discover",
+      icon: Search,
+    },
     {
       href: "/agents",
       label: "Agent Conversations",
+      hint: "Let our AIs get to know each other",
       short: "Agents",
       icon: MessagesSquare,
     },
     {
       href: "/connections",
       label: "Connections",
+      hint: "Matches, messages and date plans",
       short: "Connect",
       icon: MessageCircle,
+      count: connections,
     },
     {
       href: "/profile",
       label: "My Profile",
+      hint: "Your story, preferences and goals",
       short: "Profile",
-      icon: SlidersHorizontal,
+      icon: CircleUserRound,
     },
   ];
   return (
     <div className="app-shell">
       <aside className="app-sidebar">
         <Brand />
-        <div className="sidebar-caption">A LITTLE LESS SEARCHING.</div>
         <nav aria-label="Your space">
           {nav.map((n) => (
             <Link
               href={n.href}
               key={n.href}
               className={path === n.href ? "active" : ""}
+              aria-current={path === n.href ? "page" : undefined}
             >
-              <n.icon size={19} />
-              {n.label}
-              {n.href === "/agents" && <span className="nav-dot" />}
+              <n.icon size={20} />
+              <span>{n.label}</span>
+              {!!n.count && (
+                <span
+                  className="nav-count"
+                  aria-label={`${n.count} mutual connection${n.count === 1 ? "" : "s"}`}
+                >
+                  {n.count}
+                </span>
+              )}
+              <small>{n.hint}</small>
             </Link>
           ))}
         </nav>
-        <div className="sidebar-note">
-          <PiperMark />
-          <p>
-            Good things start
-            <br />
-            with a little curiosity.
-          </p>
-          <Link href="/onboarding">
-            Talk to Piper <ArrowUpRight size={14} />
+        {latest && latestPeer && state.profile && (
+          <Link
+            href={`/agents?with=${latestPeer.id}`}
+            className="sidebar-active"
+          >
+            <span className="eyebrow">Latest investigation</span>
+            <span className="sidebar-active-body">
+              <span className="avatar-stack" aria-hidden="true">
+                <span>{state.profile.name.slice(0, 1) || "Y"}</span>
+                <span>
+                  <Portrait
+                    id={latestPeer.id}
+                    gender={latestPeer.gender}
+                    age={latestPeer.age}
+                  />
+                </span>
+              </span>
+              <span>
+                <strong>
+                  {state.profile.name} & {latestPeer.name}
+                </strong>
+                <small>
+                  {latest.source === "gemini" ? "Live Gemini" : "Scripted demo"}{" "}
+                  · {latest.status === "partial" ? "partial" : "complete"}
+                </small>
+              </span>
+            </span>
           </Link>
-        </div>
+        )}
+        <p className="sidebar-tagline">
+          <span aria-hidden="true">✳</span>A more human way to date.
+        </p>
         <div className="sidebar-bottom">
           <Link href="/privacy">
             <ShieldCheck size={17} />
@@ -90,14 +140,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   : "Fictional demo profile"}
               </span>
             </div>
-            <Heart size={16} />
           </div>
         </div>
       </aside>
       <div className="app-content">
         <header className="app-topbar">
           <span>
-            <span className="status-dot" /> A little more possibility.
+            <span className="status-dot" /> Interactive demo · fictional people
           </span>
           <span className="badge demo-badge">INTERACTIVE DEMO</span>
           <Link href="/account" className="text-link">
@@ -125,6 +174,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             href={n.href}
             key={n.href}
             className={path === n.href ? "active" : ""}
+            aria-current={path === n.href ? "page" : undefined}
           >
             <n.icon size={20} />
             {n.short}
