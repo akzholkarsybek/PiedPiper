@@ -15,6 +15,13 @@ import { useRouter } from "next/navigation";
 import { Brand, PiperMark } from "./brand";
 import { Button } from "./ui/button";
 import { ProfileEditor } from "./profile-editor";
+import { VoiceInput } from "./voice-input";
+import {
+  reviewableDraft,
+  preferenceFields,
+  preferenceLabels,
+  type MissingPreference,
+} from "@/lib/onboarding";
 import { blankProfile, type Profile, requiredMissing } from "@/lib/profile";
 import { sampleProfile, starterMessages } from "@/lib/fixtures";
 import { dispatchDemo } from "@/lib/demo-store";
@@ -44,10 +51,36 @@ export function Onboarding({ demoEntry = false }: { demoEntry?: boolean }) {
     [presetStep, setPresetStep] = useState(0),
     [providerNotice, setProviderNotice] = useState("");
   const bottom = useRef<HTMLDivElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
+  const [recording, setRecording] = useState(false),
+    [missingPreferences, setMissingPreferences] = useState<MissingPreference[]>(
+      [...preferenceFields],
+    ),
+    [interpretations, setInterpretations] = useState<string[]>([]);
+  useEffect(() => () => abortRef.current?.abort(), []);
+  function clearSession() {
+    abortRef.current?.abort();
+    setBusy(false);
+    setMessages([welcome]);
+    setDraft(blankProfile());
+    setInput("");
+    setError("");
+    setProviderNotice("");
+    setMissingPreferences([...preferenceFields]);
+    setInterpretations([]);
+    setStage("welcome");
+    setMode("gemini");
+    setRecording(false);
+  }
   useEffect(() => {
     bottom.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [messages, busy]);
   function usePredefined() {
+    abortRef.current?.abort();
+    setInput("");
+    setBusy(false);
+    setMissingPreferences([]);
+    setInterpretations([]);
     setMode("predefined");
     setError("");
     setMessages([
@@ -62,7 +95,9 @@ export function Onboarding({ demoEntry = false }: { demoEntry?: boolean }) {
     setStage("interview");
   }
   async function send(text = input, retry = false) {
-    if (!text.trim() || busy || messages.length >= 29) return;
+    if (!text.trim() || busy || recording || messages.length >= 29) return;
+    const controller = new AbortController();
+    abortRef.current = controller;
     const next: InterviewMessage[] = retry
       ? messages
       : [...messages, { role: "user", content: text.trim() }];
@@ -72,6 +107,7 @@ export function Onboarding({ demoEntry = false }: { demoEntry?: boolean }) {
     setError("");
     try {
       const response = await fetch("/api/ai/onboard", {
+        signal: controller.signal,
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -82,22 +118,27 @@ export function Onboarding({ demoEntry = false }: { demoEntry?: boolean }) {
         }),
       });
       const data = await response.json();
+      if (controller.signal.aborted) return;
       if (!response.ok)
         throw new Error(
           data.error ?? "Piper could not respond. Please try again.",
         );
       const result = onboardingResponseSchema.parse(data);
       setProviderNotice(data.providerNotice || "");
-      setDraft({ ...blankProfile(), ...result.draft });
+      const review = reviewableDraft(result.draft);
+      setDraft(review.profile);
+      setMissingPreferences(review.missingPreferences);
+      setInterpretations(result.proposedInterpretations);
       setMessages([...next, { role: "assistant", content: result.message }]);
     } catch (error) {
+      if (controller.signal.aborted) return;
       setError(
         error instanceof Error
           ? error.message
           : "The request failed. Please try again.",
       );
     } finally {
-      setBusy(false);
+      if (!controller.signal.aborted) setBusy(false);
     }
   }
   function nextPreset() {
@@ -113,7 +154,8 @@ export function Onboarding({ demoEntry = false }: { demoEntry?: boolean }) {
     if (presetStep === 1) setDraft(sampleProfile());
     setPresetStep(presetStep + 1);
   }
-  const ready = !requiredMissing(draft).length;
+  const ready =
+    !requiredMissing(draft).length && missingPreferences.length === 0;
   return (
     <div className="onboarding-page">
       <header className="flow-nav">
@@ -237,7 +279,26 @@ export function Onboarding({ demoEntry = false }: { demoEntry?: boolean }) {
                   ? "A predefined fictional profile, ready for your review."
                   : "A Gemini-generated draft. Please correct anything that doesn’t reflect what you said."}
               </p>
+              {interpretations.length > 0 && (
+                <div className="notice">
+                  <div>
+                    <strong>
+                      AI-proposed interpretations · not used for matching
+                    </strong>
+                    <ul>
+                      {interpretations.map((text, i) => (
+                        <li key={i}>{text}</li>
+                      ))}
+                    </ul>
+                    <p>
+                      Only add an interpretation to your profile if you agree
+                      with it. Otherwise leave it out.
+                    </p>
+                  </div>
+                </div>
+              )}
               <ProfileEditor
+                missingPreferences={missingPreferences}
                 profile={draft}
                 onSave={(p) => {
                   dispatchDemo({ type: "profile", profile: p });
@@ -262,13 +323,7 @@ export function Onboarding({ demoEntry = false }: { demoEntry?: boolean }) {
                   aria-label="Start interview over"
                   className="icon-button"
                   disabled={busy}
-                  onClick={() => {
-                    setMessages([welcome]);
-                    setDraft(blankProfile());
-                    setError("");
-                    setStage("welcome");
-                    setMode("gemini");
-                  }}
+                  onClick={clearSession}
                 >
                   <RotateCcw size={17} />
                 </button>
@@ -348,6 +403,19 @@ export function Onboarding({ demoEntry = false }: { demoEntry?: boolean }) {
                   )
                 ) : (
                   <>
+                    <VoiceInput
+                      value={input}
+                      onChange={setInput}
+                      onRecordingChange={setRecording}
+                      disabled={busy || messages.length >= 29}
+                      reply={
+                        messages.findLast((m) => m.role === "assistant")
+                          ?.content ?? ""
+                      }
+                    />
+                    <p className="transcript-label">
+                      Review or correct your transcript, or type a response:
+                    </p>
                     <div className="sample-prompts">
                       {messages.length < 3 && (
                         <button
@@ -381,7 +449,7 @@ export function Onboarding({ demoEntry = false }: { demoEntry?: boolean }) {
                         onChange={(e) => setInput(e.target.value)}
                         maxLength={2500}
                         rows={2}
-                        disabled={busy || messages.length >= 29}
+                        disabled={busy || recording || messages.length >= 29}
                         onKeyDown={(e) => {
                           if (e.key === "Enter" && !e.shiftKey) {
                             e.preventDefault();
@@ -394,7 +462,10 @@ export function Onboarding({ demoEntry = false }: { demoEntry?: boolean }) {
                         type="submit"
                         aria-label="Send message to Piper"
                         disabled={
-                          busy || !input.trim() || messages.length >= 29
+                          busy ||
+                          recording ||
+                          !input.trim() ||
+                          messages.length >= 29
                         }
                       >
                         <Send size={18} />
@@ -405,6 +476,43 @@ export function Onboarding({ demoEntry = false }: { demoEntry?: boolean }) {
                         ? "Interview limit reached. Review your draft or restart."
                         : "Enter to send · Shift + Enter for a new line · Fictional details only"}
                     </small>
+                    <div className="draft-progress" aria-live="polite">
+                      <strong>
+                        Draft from your reviewed messages · awaiting profile
+                        approval
+                      </strong>
+                      <p>
+                        {[
+                          draft.name,
+                          draft.age && `${draft.age}`,
+                          draft.city,
+                          draft.intent?.replaceAll("-", " "),
+                        ]
+                          .filter(Boolean)
+                          .join(" · ") || "No profile facts extracted yet."}
+                      </p>
+                      {draft.interests.length > 0 && (
+                        <p>Interests: {draft.interests.join(", ")}</p>
+                      )}
+                      <small>
+                        Missing:{" "}
+                        {[
+                          ...requiredMissing(draft),
+                          ...missingPreferences.map(
+                            (key) => preferenceLabels[key],
+                          ),
+                        ].join(", ") ||
+                          "Essentials collected; review before sharing."}
+                      </small>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={clearSession}
+                    >
+                      Clear & delete interview session
+                    </Button>
                   </>
                 )}
                 <div className="review-action">
@@ -416,7 +524,7 @@ export function Onboarding({ demoEntry = false }: { demoEntry?: boolean }) {
                   <Button
                     variant={ready ? "default" : "outline"}
                     size="sm"
-                    disabled={busy}
+                    disabled={busy || recording}
                     onClick={() => setStage("review")}
                   >
                     Review my profile <ArrowRight size={15} />

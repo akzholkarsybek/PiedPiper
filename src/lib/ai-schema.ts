@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { profileSchema } from "./profile";
+import { interviewDraftSchema } from "./onboarding";
 export const transcriptSchema = z
   .array(
     z.object({
@@ -9,15 +9,10 @@ export const transcriptSchema = z
   )
   .max(30);
 export type InterviewMessage = z.infer<typeof transcriptSchema>[number];
-export const draftSchema = profileSchema.omit({
-  id: true,
-  approved: true,
-  fictional: true,
-  blockedIds: true,
-  readyToConnect: true,
-});
+export const draftSchema = interviewDraftSchema;
 export const onboardingResponseSchema = z.object({
   message: z.string().min(1).max(1500),
   draft: draftSchema,
   readyForReview: z.boolean(),
+  proposedInterpretations: z.array(z.string().max(250)).max(5).default([]),
 });

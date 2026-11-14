@@ -32,6 +32,16 @@ export default function Page() {
         </p>
         <h2>When you talk to Piper</h2>
         <p>
+          Voice input uses your browser’s speech recognition service only after
+          microphone consent and the browser’s permission prompt. The browser
+          may send speech to its own provider; recognition may need a network
+          connection. This application does not upload or permanently store raw
+          recordings. Stop recording, correct the transcript, and explicitly
+          send it before Gemini processes it. You can clear the current
+          transcript or delete the interview session. Optional spoken replies
+          use your browser’s speech synthesis service.
+        </p>
+        <p>
           With your consent, fictional interview messages are sent through our
           server to Google’s Gemini API to generate a response and draft
           profile. We do not save interview transcripts in browser storage or

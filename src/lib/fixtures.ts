@@ -1,4 +1,6 @@
 import { blankProfile, type Profile } from "./profile";
+import generated from "./generated/demo-population.json" with { type: "json" };
+import { profileSchema } from "./profile";
 import {
   slotsFromGrid,
   type DateCategory,
@@ -280,7 +282,7 @@ const seed = [
     "balanced",
   ],
 ] as const;
-export const demoProfiles: Profile[] = seed.map((s, i) => ({
+export const legacyDemoProfiles: Profile[] = seed.map((s, i) => ({
   ...blankProfile(s[0]),
   name: s[1],
   age: s[2],
@@ -307,6 +309,10 @@ export const demoProfiles: Profile[] = seed.map((s, i) => ({
     hard: ["smoking"],
   },
 }));
+export const demoProfiles: Profile[] = [
+  ...legacyDemoProfiles,
+  ...generated.profiles.map((p) => profileSchema.parse(p)),
+];
 export function sampleProfile(): Profile {
   return {
     ...blankProfile(),
@@ -382,6 +388,7 @@ const eveningsAndSunday: Pattern = {
   sun: ["morning", "afternoon"],
 };
 export const demoPlanning: Record<string, Planning> = {
+  ...(generated.planning as Record<string, Planning>),
   lena: fictionalPlanning(
     {
       tue: ["evening"],

@@ -14,6 +14,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "demo:generate": "node scripts/generate-demo-population.mjs",
+    "demo:check": "node scripts/generate-demo-population.mjs --check",
     "test:gemini": "node --env-file=.env.local scripts/smoke-gemini.mjs",
     "test:api": "node scripts/smoke-api.mjs",
     "test:e2e": "playwright test",

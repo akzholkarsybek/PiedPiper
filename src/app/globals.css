@@ -1,4 +1,78 @@
 @import "tailwindcss";
+.conversation-panel:has(.voice-input) {
+  height: auto;
+  max-height: none;
+}
+.conversation-panel:has(.voice-input) .conversation-messages {
+  min-height: 180px;
+  max-height: 380px;
+}
+.voice-input {
+  border: 1px solid #dfe5d5;
+  background: #f3f5ec;
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+.voice-input .check-label {
+  font-size: 10px;
+  margin: 7px 0;
+}
+.voice-input .fine-print {
+  font-size: 9px !important;
+  margin: 9px 0 !important;
+}
+.recording-status {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  color: #a14636;
+  font-size: 11px;
+  margin-top: 10px;
+}
+.recording-status .status-dot {
+  background: #b94e3d;
+}
+.voice-interim {
+  padding: 10px;
+  background: #fffdf7;
+  border-radius: 7px;
+  font-size: 12px;
+  margin-top: 8px;
+}
+.transcript-label {
+  font-size: 10px;
+  color: #647159;
+  margin: 7px 0;
+}
+.draft-progress {
+  background: #f7f6ed;
+  border-radius: 7px;
+  padding: 10px;
+  font-size: 10px;
+  margin: 10px 0;
+}
+.draft-progress p {
+  font-size: 11px;
+}
+.draft-progress small {
+  color: #6e785f;
+}
+.binding-constraints {
+  max-width: 500px;
+  text-align: left;
+  font-size: 11px;
+}
+.binding-constraints ul {
+  list-style: disc;
+  padding-left: 20px;
+}
+.collection-limit {
+  font-size: 11px;
+  color: #7b856c;
+  text-align: center;
+  margin: 20px 0;
+}
 .provider-notice {
   padding: 8px 18px;
   font-size: 10px;

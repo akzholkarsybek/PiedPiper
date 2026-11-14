@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { Check, ShieldCheck, ArrowRight } from "lucide-react";
 import { Button } from "./ui/button";
+import { type MissingPreference } from "@/lib/onboarding";
 import {
   type Profile,
   profileSchema,
@@ -18,10 +19,12 @@ export function ProfileEditor({
   profile,
   onSave,
   saveLabel = "Approve & meet your introductions",
+  missingPreferences = [],
 }: {
   profile: Profile;
   onSave: (profile: Profile) => void | Promise<void>;
   saveLabel?: string;
+  missingPreferences?: MissingPreference[];
 }) {
   const [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
@@ -203,8 +206,8 @@ export function ProfileEditor({
       <fieldset>
         <legend>Your kind of connection</legend>
         <p className="field-help">
-          These are your matching preferences. Suggested defaults are ages
-          25–45, the same city, and the same intention. Adjust them to fit you.
+          Choose the partner age range, location and intention settings that fit
+          you. Unstated interview preferences need your explicit choice.
         </p>
         <div className="form-grid">
           <label>
@@ -214,7 +217,11 @@ export function ProfileEditor({
               name="minAge"
               min="18"
               max="100"
-              defaultValue={profile.preferences.minAge}
+              defaultValue={
+                missingPreferences.includes("minAge")
+                  ? ""
+                  : profile.preferences.minAge
+              }
               required
             />
           </label>
@@ -225,7 +232,11 @@ export function ProfileEditor({
               name="maxAge"
               min="18"
               max="100"
-              defaultValue={profile.preferences.maxAge}
+              defaultValue={
+                missingPreferences.includes("maxAge")
+                  ? ""
+                  : profile.preferences.maxAge
+              }
               required
             />
           </label>
@@ -248,8 +259,14 @@ export function ProfileEditor({
           Location
           <select
             name="locationMode"
-            defaultValue={profile.preferences.locationMode}
+            defaultValue={
+              missingPreferences.includes("locationMode")
+                ? ""
+                : profile.preferences.locationMode
+            }
+            required
           >
+            <option value="">Choose location preference</option>
             <option value="local">Same city</option>
             <option value="anywhere">Open to other cities</option>
           </select>
@@ -258,7 +275,11 @@ export function ProfileEditor({
           <input
             type="checkbox"
             name="strictIntent"
-            defaultChecked={profile.preferences.strictIntent}
+            defaultChecked={
+              missingPreferences.includes("strictIntent")
+                ? false
+                : profile.preferences.strictIntent
+            }
           />
           Only introduce people with the same relationship intention
         </label>
@@ -310,6 +331,21 @@ export function ProfileEditor({
           answer stays visible as a question, not a presumed match.
         </p>
       </fieldset>
+      {missingPreferences.length > 0 && (
+        <div className="notice">
+          <div>
+            <strong>Some partner preferences were not provided.</strong>
+            <p>
+              Please enter your partner age range and location preference above,
+              and choose whether the same intention is required.
+            </p>
+            <label className="check-label">
+              <input type="checkbox" required />I explicitly confirm the partner
+              age range, location and intention settings above.
+            </label>
+          </div>
+        </div>
+      )}
       <div className="approval-box">
         <label className="check-label">
           <input type="checkbox" name="approved" required />

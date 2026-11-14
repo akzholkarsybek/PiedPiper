@@ -41,28 +41,28 @@ npm start
 
 ## What is implemented
 
-| Capability                   | Actual behavior                                                                                                                                             |
-| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Landing page                 | Responsive ivory/coral/sage design, original illustrated characters, working navigation                                                                     |
-| Gemini interview             | Server-side conversation, adaptive follow-ups, structured extraction, Zod validation, manual review                                                         |
-| Guest demonstration          | No sign-in or Supabase required; 18 fictional adult profiles; local browser storage                                                                         |
-| Profile                      | Editable biography, essentials, interests, values, lifestyle, age/gender/location preferences, hard dealbreakers                                            |
-| Introductions                | Reciprocal eligibility, deterministic weighted ranking, supported evidence, differences, unknowns                                                           |
-| Investigation                | Four supported dimensions, relevant unknowns only, opt-in question wording, explicit answer-sharing consent, decline tracking, recalculation                |
-| Mutual interest              | No connection until both decisions are interested; guest counterpart decisions are explicitly simulated                                                     |
-| Messages                     | Local persistent demo messages; synthetic replies only when explicitly requested and clearly labeled                                                        |
-| Feedback                     | Passed introductions record feedback; an explicit opt-in increases the interest weight from 20 to 30                                                        |
-| Safety                       | Adult self-attestation, profile approval, local deletion, blocking, reporting, privacy disclosures                                                          |
-| Real account path            | Supabase registration/login/logout, approved profiles, real decisions, questions, matches, human messages, blocks, reports, deletion APIs and RLS migration |
-| Deployment                   | Next.js production build, Vercel configuration, CI workflow                                                                                                 |
-| **AI Matchmakers** (P0)      | Two Gemini agents with separate contexts, 2 sequential Q&A rounds (a 3rd only for a relevant open question), ID-verified evidence, rule-based "unknown" answers without a model call, deterministic summary, reuse of recent results |
-| **Gemini reliability** (2.2) | Configurable preferred + fallback model, per-category error handling, bounded exponential backoff honoring retry delays, server-side cooldowns, no retry storms, `/diagnostics` page |
-| **Mutual availability** (P0) | Weekly editor, IANA time zones, deterministic UTC-interval overlap, explicit sharing consent, editable/clearable, never inferred                            |
+| Capability                         | Actual behavior                                                                                                                                                                                                                              |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Landing page                       | Responsive ivory/coral/sage design, original illustrated characters, working navigation                                                                                                                                                      |
+| Gemini interview                   | Server-side conversation, adaptive follow-ups, structured extraction, Zod validation, manual review                                                                                                                                          |
+| Guest demonstration                | No sign-in or Supabase required; 180 fictional adult profiles; local browser storage                                                                                                                                                         |
+| Profile                            | Editable biography, essentials, interests, values, lifestyle, age/gender/location preferences, hard dealbreakers                                                                                                                             |
+| Introductions                      | Reciprocal eligibility, deterministic weighted ranking, supported evidence, differences, unknowns                                                                                                                                            |
+| Investigation                      | Four supported dimensions, relevant unknowns only, opt-in question wording, explicit answer-sharing consent, decline tracking, recalculation                                                                                                 |
+| Mutual interest                    | No connection until both decisions are interested; guest counterpart decisions are explicitly simulated                                                                                                                                      |
+| Messages                           | Local persistent demo messages; synthetic replies only when explicitly requested and clearly labeled                                                                                                                                         |
+| Feedback                           | Passed introductions record feedback; an explicit opt-in increases the interest weight from 20 to 30                                                                                                                                         |
+| Safety                             | Adult self-attestation, profile approval, local deletion, blocking, reporting, privacy disclosures                                                                                                                                           |
+| Real account path                  | Supabase registration/login/logout, approved profiles, real decisions, questions, matches, human messages, blocks, reports, deletion APIs and RLS migration                                                                                  |
+| Deployment                         | Next.js production build, Vercel configuration, CI workflow                                                                                                                                                                                  |
+| **AI Matchmakers** (P0)            | Two Gemini agents with separate contexts, 2 sequential Q&A rounds (a 3rd only for a relevant open question), ID-verified evidence, rule-based "unknown" answers without a model call, deterministic summary, reuse of recent results         |
+| **Gemini reliability** (2.2)       | Configurable preferred + fallback model, per-category error handling, bounded exponential backoff honoring retry delays, server-side cooldowns, no retry storms, `/diagnostics` page                                                         |
+| **Mutual availability** (P0)       | Weekly editor, IANA time zones, deterministic UTC-interval overlap, explicit sharing consent, editable/clearable, never inferred                                                                                                             |
 | **Discover Your First Date** (2.2) | Real places (OpenStreetMap) and upcoming events (manually verified Ticketon pages) for Astana/Almaty; city, category, budget, time, indoor/outdoor and shared-interest filters; deterministic ranking; optional verified Gemini explanations |
-| **First-date planning** (P0) | After mutual interest only: activity-type ideas plus real venue/event proposals that are not confirmed until both accept; nothing is booked or purchased |
-| **Profile enrichment** (P1)  | "Let Piper Understand Your Interests": your own text (and, if enabled, your own photos) → pending suggestions; confirmed / suggested / unknown / private labels; delete everything you pasted |
-| **Instagram** (2.2, P1)      | Optional username: syntax check only, private by default, visibility toggle, removable; never fetched, scraped or sent to agents |
-| **Ready to Connect** (P1)    | Pause/resume new introductions in both directions; existing matches and messages preserved; enforced in JS and SQL                                          |
+| **First-date planning** (P0)       | After mutual interest only: activity-type ideas plus real venue/event proposals that are not confirmed until both accept; nothing is booked or purchased                                                                                     |
+| **Profile enrichment** (P1)        | "Let Piper Understand Your Interests": your own text (and, if enabled, your own photos) → pending suggestions; confirmed / suggested / unknown / private labels; delete everything you pasted                                                |
+| **Instagram** (2.2, P1)            | Optional username: syntax check only, private by default, visibility toggle, removable; never fetched, scraped or sent to agents                                                                                                             |
+| **Ready to Connect** (P1)          | Pause/resume new introductions in both directions; existing matches and messages preserved; enforced in JS and SQL                                                                                                                           |
 
 **Configuration limits:** Supabase and Vercel credentials were not present. The real-account code and SQL authorization were tested locally, but hosted Supabase sign-up/email/persistence were not verified. No Vercel deployment URL has been created or verified. Real profiles are entered manually; the guest UI does not send real dating interviews to Gemini.
 
@@ -104,17 +104,17 @@ Guest storage is isolated under `pied-piper:fictional-demo:v2`. Saved Phase 1 (`
 
 ## Environment configuration
 
-| Variable                               | Required                | Purpose                                                                                          |
-| -------------------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------ |
-| `GEMINI_API_KEY`                       | For live AI             | Server-only Google API credential                                                                |
-| `GEMINI_MODEL`                         | For live AI             | Preferred model for all Gemini calls; recommended `gemini-3.5-flash-lite`                        |
+| Variable                               | Required                | Purpose                                                                                                                                                                                                                                       |
+| -------------------------------------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GEMINI_API_KEY`                       | For live AI             | Server-only Google API credential                                                                                                                                                                                                             |
+| `GEMINI_MODEL`                         | For live AI             | Preferred model for all Gemini calls; recommended `gemini-3.5-flash-lite`                                                                                                                                                                     |
 | `GEMINI_FALLBACK_MODEL`                | Optional                | Tried only for model-specific failures (404, 5xx/timeout after retries, per-model quota) and only when not cooling down; defaults to `gemini-3.5-flash` (or `gemini-3.5-flash-lite` when `GEMINI_MODEL` is another model); `none` disables it |
-| `ALLOW_PHOTO_ANALYSIS`                 | Optional, default false | Enables photo suggestions. Leave off on free-tier keys; enable only with a provider configuration suitable for personal images |
-| `PLACES_OSM_LIVE`                      | Optional, default false | Enables the optional live OpenStreetMap (Overpass) places endpoint `/api/places` (cached 24 h)   |
-| `OVERPASS_URL`                         | Optional                | Overpass endpoint for the live provider                                                          |
-| `NEXT_PUBLIC_SUPABASE_URL`             | For real accounts       | Supabase project URL                                                                             |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | For real accounts       | Public/publishable key, protected by database RLS                                                |
-| `ALLOW_REAL_AI_PROCESSING`             | Optional, default false | Explicit operator gate for real-data API requests; manual account profiles remain the UI default |
+| `ALLOW_PHOTO_ANALYSIS`                 | Optional, default false | Enables photo suggestions. Leave off on free-tier keys; enable only with a provider configuration suitable for personal images                                                                                                                |
+| `PLACES_OSM_LIVE`                      | Optional, default false | Enables the optional live OpenStreetMap (Overpass) places endpoint `/api/places` (cached 24 h)                                                                                                                                                |
+| `OVERPASS_URL`                         | Optional                | Overpass endpoint for the live provider                                                                                                                                                                                                       |
+| `NEXT_PUBLIC_SUPABASE_URL`             | For real accounts       | Supabase project URL                                                                                                                                                                                                                          |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | For real accounts       | Public/publishable key, protected by database RLS                                                                                                                                                                                             |
+| `ALLOW_REAL_AI_PROCESSING`             | Optional, default false | Explicit operator gate for real-data API requests; manual account profiles remain the UI default                                                                                                                                              |
 
 Never put Gemini credentials in a `NEXT_PUBLIC_` variable. No service-role Supabase key is needed by this application. Public Supabase settings must be set before building because Next.js embeds them into the browser bundle.
 
@@ -130,16 +130,16 @@ The local `.env.local` therefore now sets only `GEMINI_MODEL=gemini-3.5-flash-li
 
 #### Error handling and quota recovery (`src/lib/gemini.ts`, `src/lib/gemini-health.ts`)
 
-| Failure | Detected by | What happens |
-| --- | --- | --- |
-| 401/403 (or 400 "API key") | HTTP status | No retry, no model switch; project cools down 10 min; "check credentials" message |
-| 404 | HTTP status | Model marked unavailable for 1 h; fallback tried once |
-| 429 short rate limit | `QuotaFailure` per-minute / short `RetryInfo` | Up to 2 retries with exponential backoff + jitter, honoring `RetryInfo` if ≤ 10 s; longer delays are not waited out: the model cools down and the fallback is tried |
-| 429 daily quota | `…PerDay…` quota id, "daily", or delay > 15 min | **No retries.** Cools down until the provider's reset time. If the quota is per-model, the fallback is tried once; if project-wide, everything stops and later calls fail fast without a request |
-| 500/503 | HTTP status | Bounded backoff (≤ 2 retries), then 3-minute circuit breaker and fallback |
-| 504 / client timeout | Status or `AbortError` | One retry, then circuit breaker and fallback |
-| Network failure | `fetch failed`, `ECONN…` | One retry; short project cooldown |
-| Malformed JSON / schema | Parse/Zod | No retry, no cooldown (not an outage) |
+| Failure                    | Detected by                                     | What happens                                                                                                                                                                                     |
+| -------------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 401/403 (or 400 "API key") | HTTP status                                     | No retry, no model switch; project cools down 10 min; "check credentials" message                                                                                                                |
+| 404                        | HTTP status                                     | Model marked unavailable for 1 h; fallback tried once                                                                                                                                            |
+| 429 short rate limit       | `QuotaFailure` per-minute / short `RetryInfo`   | Up to 2 retries with exponential backoff + jitter, honoring `RetryInfo` if ≤ 10 s; longer delays are not waited out: the model cools down and the fallback is tried                              |
+| 429 daily quota            | `…PerDay…` quota id, "daily", or delay > 15 min | **No retries.** Cools down until the provider's reset time. If the quota is per-model, the fallback is tried once; if project-wide, everything stops and later calls fail fast without a request |
+| 500/503                    | HTTP status                                     | Bounded backoff (≤ 2 retries), then 3-minute circuit breaker and fallback                                                                                                                        |
+| 504 / client timeout       | Status or `AbortError`                          | One retry, then circuit breaker and fallback                                                                                                                                                     |
+| Network failure            | `fetch failed`, `ECONN…`                        | One retry; short project cooldown                                                                                                                                                                |
+| Malformed JSON / schema    | Parse/Zod                                       | No retry, no cooldown (not an outage)                                                                                                                                                            |
 
 Each call has a request cap (`maxRequests`) and respects an orchestration deadline, so there are no retry storms. Cooldowns are short-lived, in server memory, and contain only model names, categories and timestamps — never keys, prompts, provider messages or profile data. Users only see category-specific, user-safe messages.
 
@@ -193,12 +193,12 @@ Implementation: `src/lib/places/` (types, curated data, providers), `src/lib/dat
 
 **Providers.**
 
-| Provider | Kind | Data | Notes |
-| --- | --- | --- | --- |
-| Curated places | Real, curated | 26 cafés, restaurants, parks, museums from **OpenStreetMap** (retrieved 2026-11-14 via a handful of Nominatim requests) | OSM IDs, names, coordinates, street addresses and website tags exactly as recorded (transliterated street names alongside the original). No ratings, prices or opening hours. © OpenStreetMap contributors (ODbL). Parks are the only "free" items. |
-| Curated events | Real, curated | 10 upcoming events from **Ticketon.kz**, checked by hand on 2026-11-14 | Title, venue/address (when shown), date and time with `+05:00`, lowest listed "from" price, age limit, official Ticketon URL. Listing-only items are marked "venue not shown". Where the page omitted the year, it is labeled "year inferred from the current listing". |
-| Live OpenStreetMap | Real, live (optional) | Overpass query per city bbox | Off unless `PLACES_OSM_LIVE=true`; 24 h cache, one in-flight request per city, failures isolated and reported. Public Overpass servers were at capacity during development, which is why the demo never depends on them. |
-| Google Places | — | Not implemented | Would need valid credentials and billing; the provider interface (`VenueProvider`) is ready for it. |
+| Provider           | Kind                  | Data                                                                                                                    | Notes                                                                                                                                                                                                                                                                   |
+| ------------------ | --------------------- | ----------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Curated places     | Real, curated         | 26 cafés, restaurants, parks, museums from **OpenStreetMap** (retrieved 2026-11-14 via a handful of Nominatim requests) | OSM IDs, names, coordinates, street addresses and website tags exactly as recorded (transliterated street names alongside the original). No ratings, prices or opening hours. © OpenStreetMap contributors (ODbL). Parks are the only "free" items.                     |
+| Curated events     | Real, curated         | 10 upcoming events from **Ticketon.kz**, checked by hand on 2026-11-14                                                  | Title, venue/address (when shown), date and time with `+05:00`, lowest listed "from" price, age limit, official Ticketon URL. Listing-only items are marked "venue not shown". Where the page omitted the year, it is labeled "year inferred from the current listing". |
+| Live OpenStreetMap | Real, live (optional) | Overpass query per city bbox                                                                                            | Off unless `PLACES_OSM_LIVE=true`; 24 h cache, one in-flight request per city, failures isolated and reported. Public Overpass servers were at capacity during development, which is why the demo never depends on them.                                                |
+| Google Places      | —                     | Not implemented                                                                                                         | Would need valid credentials and billing; the provider interface (`VenueProvider`) is ready for it.                                                                                                                                                                     |
 
 **Ticketon.** No documented public API, partner or affiliate API was found (site footer: "For Organizers", "For Advertisers"; robots.txt allows the pages). No scraping, private endpoints or access-control bypasses are used — only a small, manually verified list with links to the official pages. Ticket availability is never claimed; nothing is purchased or reserved.
 
@@ -240,6 +240,38 @@ The weighted sum determines ordering only; it is **not** a romantic compatibilit
 
 Investigations support `children`, `smoking`, `drinking`, and `pace`. Questions arise only for an unknown answer with a stated preference on the other side. Hard preferences are prioritized. Only a consented, validated answer becomes a profile attribute. The next ranking uses the updated facts. Declines are recorded per pair/dimension and never interpreted as an answer.
 
+## Voice onboarding and the expanded demo (Phase 2.2 additions)
+
+The landing page’s **Talk to Piper** opens the guest onboarding flow. Confirm adult status and Gemini processing consent, then start the interview. In the interview, consent to the browser speech service and press **Talk to Piper**. The browser asks for microphone access. Speak for about a minute, stop, review/correct the text, and press Send. Nothing is automatically sent to Gemini. Continue in either voice or text; both update the same draft and conversation.
+
+Voice capture uses `SpeechRecognition` or `webkitSpeechRecognition` with live interim transcription when the browser service supports it. A 90-second cap stops a session, and permission errors, network errors, missing microphones, unsupported browsers, and insecure origins leave ordinary text entry available. Microphone permission is restricted to this app’s own origin. Raw audio is never retained by the app. Browser recognition may send audio to the browser vendor’s speech service. Optional opt-in spoken replies use `speechSynthesis`; they are browser voices, not Gemini-generated audio. Stop playback and clear/delete interview controls are available. The interview and draft stay in component memory until explicit profile approval.
+
+Unstated age ranges, locality, and intention filters now remain `null` in Gemini’s interview schema. Piper asks focused follow-ups rather than inventing defaults. If the user finishes early, the review form requires missing preference choices and explicit confirmation. The approved profile schema remains strict. Tentative AI interpretations appear separately and never enter matching unless the user deliberately adds them to the reviewed profile. All draft profile facts still require human review and approval before matching.
+
+**Speech approach investigated:** native browser recognition was selected because it reuses the reliable text/Gemini path without spending additional Gemini transcription requests. MediaRecorder can capture audio on more browsers but needs a transcription service; audio capture alone is not transcription. Gemini’s audio-input APIs could support a future backend fallback, but current free-tier/model entitlement and quota cannot be assumed. Ordinary text is the implemented cross-browser fallback. The configured key’s current model inventory advertised **zero Live/native-audio models** in our check. No Live WebSocket session was verified and full-duplex Live streaming is not enabled. No paid speech service is required.
+
+**Current verification:** a minimal request and two live Gemini onboarding turns succeeded. The fictional Astana example correctly left gender and partner age/locality/intention preferences unknown; a second explicit answer supplied those fields. The browser E2E journey uses controlled speech events and mocked Gemini responses for repeatability, then real local ranking, scripted agents, availability, and date proposals. It does not prove physical microphone capture, browser-vendor recognition quality, or speaker playback on a particular device. Test those with the actual presentation browser before the hackathon. The existing quota/cooldown handling remains active; success now is not a guarantee of free-tier capacity during judging.
+
+The pool now contains **180 fictional adult profiles**: the original 18 scenario profiles are preserved, plus 162 generated profiles (72 Astana, 30 Almaty, 30 New York City, 30 San Francisco). The generator uses a fixed seed, local templates, and deliberately stratified age/gender/intention cohorts, with varied smoking/family plans, hard preferences, unknowns, readiness, weekly availability, activity preferences, and budgets. Nobody is added by an API call. Original special cases such as Lena’s unknown family plans, Sophie’s unshared availability, and Jules’s missing availability remain intact. New York/NYC/New York City normalize to the same city for matching.
+
+`scripts/generate-demo-population.mjs` produces the committed `src/lib/generated/demo-population.json`. `npm run demo:generate` regenerates it; `npm run demo:check` verifies reproducibility. Imported profiles are validated with Zod, and tests validate every planning record. Profile IDs are stable. Version-1 and version-2 guest data append only missing fixture IDs and retain consented answers, blocks, interest decisions, messages, agent sessions, date proposals, and saved planning. The dataset fits within ordinary local-storage limits; storage failures still have explicit error handling.
+
+Discover starts with three introductions and offers one further batch of up to three within the existing six-introduction collection limit. The presented IDs persist across reloads, passes do not silently refill the list, and new batches revalidate reciprocal eligibility and readiness. You can open an approved profile, launch its agents, pass or express interest, and explicitly simulate mutual approval. Empty results show aggregate exclusion counts with overlapping constraints; no preference is widened automatically.
+
+New tests cover all 36 city × gender × relationship-intention cohorts with **at least three mutually eligible candidates each**, representative ages 21–45, restrictive empty cases, confirmed hard conflicts, paused profiles, deterministic ranking, migration/persistence, generated-candidate scripted investigations, and general availability overlap. A performance check repeats ranking over all 180 profiles 20 times and requires the total to remain below four seconds. This is a test-environment threshold, not a production latency guarantee.
+
+For the main demonstration: voice description → transcript correction → Gemini follow-ups → editable profile approval → three curated introductions → **Let our AIs talk** (live with consent or explicitly scripted) → simulated mutual approval → shared availability → template or Gemini date ideas → proposal and simulated acceptance. The no-quota path remains explicitly **Explore the predefined demonstration**, then scripted agents and template dates; live voice is never silently replaced with scripted speech.
+
+```bash
+npm run demo:check
+# With the app running, two fictional provider calls:
+node scripts/smoke-voice-profile.mjs
+# Read-only model inventory; never prints credentials or configured values:
+node --env-file=.env.local scripts/check-voice-capabilities.mjs
+```
+
+References: [browser SpeechRecognition support and service behavior](https://developer.mozilla.org/en-US/docs/Web/API/SpeechRecognition), [Gemini audio input](https://ai.google.dev/gemini-api/docs/audio), [Gemini Live API](https://ai.google.dev/gemini-api/docs/live), [model-dependent free-tier pricing](https://ai.google.dev/gemini-api/docs/pricing). Published availability does not establish entitlement for this project.
+
 ## Supabase setup
 
 1. Create a Supabase project.
@@ -271,15 +303,16 @@ npm run build
 npm run test:e2e
 ```
 
-- **143 unit/PostgreSQL tests** (Vitest, 9 files):
+- **160 unit/PostgreSQL tests** (Vitest, 11 files):
   - Phase 1 (34): reciprocal ages/genders/locations/goals, hard constraints, blocks, deterministic ranking, evidence, unknowns, consent/decline/update behavior, explicit mutual interest, message authorization, feedback updates, SQL impersonation prevention and deletion.
+  - Expanded population (11) and voice-profile handoff (6): all fixtures/planning, cohort coverage, strict filters, pause behavior, migration, bounded batches, ranking performance, generated-candidate agents, consent, absent preferences, partial age ranges, quota errors, and speech fallback messages.
   - Gemini client (16, `tests/gemini.test.ts`): model configuration and fallback rules, classification of 401/403/400-key/404/429 short/429 daily (per-model vs project)/500/503/504/abort/network, no retries after daily quota, fail-fast during cooldown, backoff honoring `RetryInfo`, not waiting for long delays, one 504 retry then circuit breaker, request caps, no switching after auth errors, 404 memory, malformed JSON, request accounting, diagnostics and error messages free of secrets.
   - Agents (24, `tests/agents.test.ts`): two default rounds, a conditional third round (runs when healthy, skipped after retries), call-count limits, rule answers without a model call, topic-only fact minimization, no transcript, context separation, constant system instructions, prompt injection (the compromised answer model is never asked about unshared dimensions), grounding rewrites, deterministic summary without scores, shared activities grounded in both people's facts, failures and partial results, the scripted path.
   - Places, events and recommendations (27, `tests/places.test.ts`): curated data validation, source attribution, official link validation (look-alike hosts rejected), no stored ratings/hours, `+05:00` times, mutual-match requirement, city and category filters, variety, expired-event exclusion, time-zone formatting, availability compatibility, unshared availability, exhibition slots, missing prices, budget filtering, grounded ranking, empty state, provider failure isolation, OSM tag mapping, caching/single-flight, Gemini explanation verification, venue proposal transitions.
   - Instagram and enrichment (11, `tests/social-enrichment.test.ts`): username validation, visibility consent, removal, never in the profile or agent context, no network requests, no Instagram access anywhere in the source, migration of older saved data, photo label filtering of personal/sensitive content, pending approval/rejection, deletion of pasted-content suggestions, photo route disabled by default.
   - Availability, dates, enrichment, Ready to Connect, persistence (21, `tests/phase2.test.ts`), now in Astana time.
   - SQL Phase 2 (5) and **SQL Phase 2.2 (5, `tests/database-phase2-2.test.ts`)**: hidden usernames unreadable even by a match, visibility and blocking, owner-only writes, username validation, venue column validation, cascade on deletion.
-- **26 browser tests** (Playwright, 13 scenarios × desktop + mobile): everything above plus Discover Your First Date in Astana (verified card fields, Ticketon/OSM links, availability fit, proposal → simulated acceptance, Almaty, parks, alternatives, persistence, shared-activity deep link), the post-expiry empty state, "Live Gemini temporarily unavailable" with scripted fallback, rule-answer labeling in a live stream, `/diagnostics` without secrets, Instagram validation/visibility/removal, photos staying local, and deletion of pasted content. Event-dependent tests pin the browser clock to 2026-11-14.
+- **34 browser tests** (Playwright, 17 scenarios × desktop + mobile): the original 26 checks plus voice/transcript correction through profile approval, matching, scripted agents and a confirmed demo date; unsupported recognition and typed fallback; permission-denial recovery and opt-in speech playback; three/six introduction limits, approved profile viewing, and expanded-pool persistence/migration. The existing checks cover Discover Your First Date in Astana, verified venue fields, Ticketon/OSM links, availability fit, proposals, expiry, explicit Gemini failures, diagnostics, Instagram privacy and deletion. Event-dependent tests pin the browser clock to 2026-11-14.
 - **Live provider checks** (2026-11-14): see _Live verification_ above.
 - Production build, TypeScript, and ESLint pass.
 
@@ -349,7 +382,10 @@ src/lib/enrichment.ts     Quoted, non-sensitive, pending profile suggestions
 src/lib/profile.ts        Zod schemas, supported dimensions, unknown handling
 src/lib/matching.ts       Reciprocal filters, weighted rank, explainability
 src/lib/demo-store.ts     Isolated, validated local-storage adapter and pure transitions
-src/lib/fixtures.ts       18 explicitly fictional profiles and sample interview
+src/lib/fixtures.ts       Original 18 scenario profiles plus 162 seeded generated profiles
+src/lib/generated/        Committed reproducible demo population and planning fixtures
+src/lib/speech.ts         Browser speech adapter and explicit fallback messages
+src/lib/onboarding.ts     Nullable interview preferences and approval handoff
 src/lib/gemini.ts         Server-only SDK, structured output, bounded retries, fallback, user-safe errors
 src/lib/supabase/         Browser/server auth clients
 src/proxy.ts              Supabase cookie refresh for account routes
@@ -377,7 +413,7 @@ The stack is Next.js App Router, React, TypeScript, Tailwind CSS 4, shadcn-compa
 - No Ticketon API integration (none is publicly documented) and no Google Places provider (needs credentials and billing). The live OpenStreetMap provider depends on public Overpass servers, which were overloaded during development.
 - Photo analysis is implemented but disabled by default and was not live-tested; it requires an operator decision and a suitable provider configuration.
 - The real-account UI does not yet render the date planner, discovery, or Instagram card; the API and SQL support them.
-- Voice, embeddings, and advanced learning are intentionally outside this MVP.
+- Full-duplex Gemini Live, embeddings, and advanced learning remain outside this MVP. Browser voice input and optional browser-spoken replies are implemented.
 
 ## Official references
 

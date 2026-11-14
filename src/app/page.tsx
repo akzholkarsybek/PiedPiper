@@ -53,7 +53,7 @@ export default function Home() {
             <div className="hero-actions">
               <Button asChild size="lg">
                 <Link href="/onboarding">
-                  Get started <ArrowUpRight size={19} />
+                  Talk to Piper <ArrowUpRight size={19} />
                 </Link>
               </Button>
               <Button asChild variant="outline" size="lg">

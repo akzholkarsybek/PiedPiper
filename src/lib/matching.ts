@@ -16,6 +16,12 @@ export const DEFAULT_WEIGHTS = {
 };
 export type Weights = typeof DEFAULT_WEIGHTS;
 const normalize = (s: string) => s.trim().toLocaleLowerCase("en-US");
+export const normalizeCity = (s: string) => {
+  const city = normalize(s);
+  return ["new york", "new york city", "nyc"].includes(city)
+    ? "new york city"
+    : city;
+};
 export const intersection = (a: string[], b: string[]) =>
   [...new Set(a.map(normalize))].filter((x) => b.map(normalize).includes(x));
 const overlap = (a: string[], b: string[]) =>
@@ -49,7 +55,7 @@ export function eligibility(a: Profile, b: Profile) {
       reasons.push(`${viewer.name}'s gender preference`);
     if (
       viewer.preferences.locationMode === "local" &&
-      normalize(viewer.city) !== normalize(candidate.city)
+      normalizeCity(viewer.city) !== normalizeCity(candidate.city)
     )
       reasons.push(`${viewer.name}'s location preference`);
     if (
@@ -70,6 +76,35 @@ export function eligibility(a: Profile, b: Profile) {
 }
 export function isOpenToIntroductions(p: Profile) {
   return p.readyToConnect !== false;
+}
+/** Aggregate exclusions only; rejected profile details are never displayed. */
+export function exclusionSummary(a: Profile, candidates: Profile[]) {
+  const counts = new Map<string, number>();
+  for (const b of candidates) {
+    const labels = new Set<string>();
+    if (!isOpenToIntroductions(b)) labels.add("Ready-to-Connect is paused");
+    for (const reason of eligibility(a, b).reasons) {
+      labels.add(
+        reason.includes("age preference")
+          ? "Both people’s age ranges"
+          : reason.includes("gender preference")
+            ? "Both people’s dating preferences"
+            : reason.includes("location preference")
+              ? "Both people’s city preferences"
+              : reason.includes("relationship intention")
+                ? "Relationship intentions"
+                : reason.includes("dealbreaker")
+                  ? "Confirmed hard dealbreakers"
+                  : reason.includes("blocked")
+                    ? "Blocking restrictions"
+                    : reason,
+      );
+    }
+    for (const label of labels) counts.set(label, (counts.get(label) ?? 0) + 1);
+  }
+  return [...counts]
+    .sort((a, b) => b[1] - a[1])
+    .map(([reason, count]) => ({ reason, count }));
 }
 export type Investigation = {
   key: string;

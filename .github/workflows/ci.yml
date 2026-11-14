@@ -1,7 +1,7 @@
 name: Verify Pied Piper
 on:
   push:
-    branches: [main]
+    branches: [Piper]
   pull_request:
 permissions:
   contents: read
@@ -17,6 +17,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run typecheck
+      - run: npm run demo:check
       - run: npm run lint
       - run: npm test
       - run: npm run build

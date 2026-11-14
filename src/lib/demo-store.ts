@@ -80,6 +80,7 @@ const stateSchema = z.object({
   enrichment: z.array(suggestionSchema).max(60),
   /** Optional Instagram username, kept apart from the profile (Phase 2.2). */
   social: socialSchema.default(emptySocial),
+  introducedIds: z.array(z.string()).max(6).default([]),
 });
 export type DemoState = z.infer<typeof stateSchema>;
 export function initialDemo(): DemoState {
@@ -100,16 +101,36 @@ export function initialDemo(): DemoState {
     proposals: [],
     enrichment: [],
     social: emptySocial(),
+    introducedIds: [],
   };
 }
 /** Upgrade any supported saved state to the current schema. Throws if invalid. */
 export function migrateDemo(raw: unknown): DemoState {
   const version = (raw as { version?: unknown } | null)?.version;
-  if (version === 2) return stateSchema.parse(raw);
+  if (version === 2) {
+    const saved = stateSchema.parse(raw);
+    // Append only new stable fixture IDs. Never replace consented answers,
+    // blocks, decisions, sessions, messages, proposals, or saved planning.
+    const ids = new Set(saved.candidates.map((p) => p.id));
+    return {
+      ...saved,
+      candidates: [
+        ...saved.candidates,
+        ...structuredClone(demoProfiles.filter((p) => !ids.has(p.id))),
+      ],
+      planning: { ...structuredClone(demoPlanning), ...saved.planning },
+    };
+  }
   const v1 = legacyV1Schema.parse(raw);
   const fresh = initialDemo();
   return stateSchema.parse({
     ...v1,
+    candidates: [
+      ...v1.candidates,
+      ...fresh.candidates.filter(
+        (p) => !v1.candidates.some((old) => old.id === p.id),
+      ),
+    ],
     version: 2,
     planning: fresh.planning,
     agentSessions: {},
@@ -121,6 +142,7 @@ export function migrateDemo(raw: unknown): DemoState {
 }
 export type DemoAction =
   | { type: "profile"; profile: Profile }
+  | { type: "introductions"; ids: string[] }
   | {
       type: "decision";
       id: string;
@@ -184,6 +206,7 @@ export function reduceDemo(state: DemoState, action: DemoAction): DemoState {
   if (action.type === "profile")
     return {
       ...state,
+      introducedIds: [],
       profile: profileSchema.parse({
         ...action.profile,
         fictional: true,
@@ -191,8 +214,26 @@ export function reduceDemo(state: DemoState, action: DemoAction): DemoState {
       }),
     };
   if (action.type === "reset-decisions")
-    return { ...state, decisions: {}, counterparts: {} };
+    return { ...state, decisions: {}, counterparts: {}, introducedIds: [] };
   if (!state.profile) throw new Error("Review and approve your profile first.");
+  if (action.type === "introductions") {
+    const ids = [...new Set([...state.introducedIds, ...action.ids])];
+    if (ids.length > 6)
+      throw new Error("This collection is limited to six introductions.");
+    for (const id of action.ids) {
+      const peer = state.candidates.find((p) => p.id === id);
+      if (
+        !peer ||
+        !isOpenToIntroductions(state.profile) ||
+        !isOpenToIntroductions(peer) ||
+        !eligibility(state.profile, peer).eligible
+      )
+        throw new Error(
+          "Only mutually eligible, Ready-to-Connect profiles can be introduced.",
+        );
+    }
+    return { ...state, introducedIds: ids };
+  }
   if (action.type === "social")
     return {
       ...state,
@@ -533,8 +574,18 @@ function getSnapshot() {
     hydrated = true;
     try {
       const raw = localStorage.getItem(storageKey);
-      if (raw) snapshot = migrateDemo(JSON.parse(raw));
-      else {
+      if (raw) {
+        snapshot = migrateDemo(JSON.parse(raw));
+        const upgraded = JSON.stringify(snapshot);
+        if (upgraded !== raw) {
+          try {
+            localStorage.setItem(storageKey, upgraded);
+          } catch {
+            storageError =
+              "The upgraded demo is available for this visit, but browser storage could not save it.";
+          }
+        }
+      } else {
         // Safe upgrade: keep Phase 1 progress, then retire the legacy key only
         // after the migrated state has been written successfully.
         for (const key of legacyStorageKeys) {

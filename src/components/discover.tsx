@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ArrowRight,
   ArrowUpRight,
@@ -27,6 +27,7 @@ import { MotionCard } from "./motion-card";
 import { dispatchDemo, matched, useDemo } from "@/lib/demo-store";
 import {
   recommend,
+  exclusionSummary,
   type Recommendation,
   type Investigation,
 } from "@/lib/matching";
@@ -47,7 +48,27 @@ export function Discover() {
     [reporting, setReporting] = useState<string | null>(null);
   const [reason, setReason] = useState("Not the connection I’m looking for"),
     [prioritize, setPrioritize] = useState(false),
-    [showAll, setShowAll] = useState(false);
+    [viewing, setViewing] = useState<string | null>(null);
+  useEffect(() => {
+    if (state.profile?.approved && state.introducedIds.length === 0) {
+      const ids = recommend(state.profile, state.candidates, state.weights)
+        .filter(
+          (r) =>
+            state.decisions[r.profile.id] !== "pass" &&
+            state.counterparts[r.profile.id] !== "pass",
+        )
+        .slice(0, 3)
+        .map((r) => r.profile.id);
+      if (ids.length) dispatchDemo({ type: "introductions", ids });
+    }
+  }, [
+    state.profile,
+    state.candidates,
+    state.weights,
+    state.decisions,
+    state.counterparts,
+    state.introducedIds,
+  ]);
   if (!state.profile?.approved)
     return (
       <AppShell>
@@ -62,7 +83,10 @@ export function Discover() {
         state.decisions[r.profile.id] !== "pass" &&
         state.counterparts[r.profile.id] !== "pass",
     );
-  const filtered = available.filter((r) =>
+  const collection = available.filter((r) =>
+    state.introducedIds.includes(r.profile.id),
+  );
+  const filtered = collection.filter((r) =>
     filter === "questions"
       ? r.missing.some((q) => !state.questions[q.key])
       : filter === "interested"
@@ -70,6 +94,10 @@ export function Discover() {
         : true,
   );
   const selected = ranked.find((r) => r.profile.id === investigating);
+  const viewed = collection.find((r) => r.profile.id === viewing)?.profile;
+  const nextBatch = available
+    .filter((r) => !state.introducedIds.includes(r.profile.id))
+    .slice(0, Math.min(3, 6 - state.introducedIds.length));
   function act(fn: () => void, message: string) {
     try {
       fn();
@@ -147,10 +175,9 @@ export function Discover() {
             className={filter === "all" ? "active" : ""}
             onClick={() => {
               setFilter("all");
-              setShowAll(false);
             }}
           >
-            For you <span>{available.length}</span>
+            For you <span>{collection.length}</span>
           </button>
           <button
             className={filter === "questions" ? "active" : ""}
@@ -186,6 +213,25 @@ export function Discover() {
                 ? "No unanswered, relevant questions in this collection."
                 : "No profiles currently meet both people’s requirements. You can adjust your preferences or revisit passed introductions."}
           </p>
+          {!paused && ranked.length === 0 && (
+            <div className="binding-constraints">
+              <p>
+                Across {state.candidates.length} fictional profiles, these rules
+                exclude candidates (counts overlap):
+              </p>
+              <ul>
+                {exclusionSummary(profile, state.candidates).map((x) => (
+                  <li key={x.reason}>
+                    {x.reason}: {x.count}
+                  </li>
+                ))}
+              </ul>
+              <p>
+                All requirements remain in place. You can choose whether to
+                change any preference.
+              </p>
+            </div>
+          )}
           <div className="inline-actions">
             <Button variant="outline" onClick={() => setFilter("all")}>
               See all introductions
@@ -210,10 +256,11 @@ export function Discover() {
         </div>
       ) : (
         <div className="recommendation-grid">
-          {filtered.slice(0, showAll ? 6 : 3).map((r, i) => (
+          {filtered.map((r, i) => (
             <MatchCard
               key={r.profile.id + JSON.stringify(r.profile.attributes)}
               recommendation={r}
+              onView={() => setViewing(r.profile.id)}
               viewer={profile}
               index={i}
               decision={state.decisions[r.profile.id]}
@@ -260,13 +307,58 @@ export function Discover() {
           ))}
         </div>
       )}
-      {!showAll && filtered.length > 3 && (
+      {nextBatch.length > 0 && (
         <div className="load-more">
-          <Button variant="outline" onClick={() => setShowAll(true)}>
-            Meet a few more <ArrowRight size={16} />
+          <Button
+            variant="outline"
+            onClick={() =>
+              act(
+                () =>
+                  dispatchDemo({
+                    type: "introductions",
+                    ids: nextBatch.map((r) => r.profile.id),
+                  }),
+                "The next small batch was selected using the same reciprocal requirements.",
+              )
+            }
+          >
+            Meet the next {nextBatch.length} <ArrowRight size={16} />
           </Button>
           <p>Up to six thoughtful introductions. Then take a breath.</p>
         </div>
+      )}
+      {state.introducedIds.length === 6 && (
+        <p className="collection-limit">
+          Your collection of six introductions is ready. Take time to explore
+          these people or review your preferences.
+        </p>
+      )}
+      {viewed && (
+        <Modal
+          title={`${viewed.name}, ${viewed.age} · fictional profile`}
+          onClose={() => setViewing(null)}
+        >
+          <p>
+            {viewed.city} · {title(viewed.gender)} · {title(viewed.intent)}
+          </p>
+          <p>{viewed.bio}</p>
+          <h3>Approved interests & values</h3>
+          <p>{viewed.interests.join(", ")}</p>
+          <p>{viewed.values.join(", ")}</p>
+          <h3>Shared lifestyle facts</h3>
+          {Object.entries(viewed.attributes).map(([d, v]) => (
+            <p key={d}>
+              {dimensionLabels[d as keyof typeof dimensionLabels]}:{" "}
+              {attributeLabel(d as keyof typeof dimensionLabels, v)}
+            </p>
+          ))}
+          <Link
+            className="button button-primary"
+            href={`/agents?with=${viewed.id}`}
+          >
+            Let our AIs talk <MessagesSquare size={16} />
+          </Link>
+        </Modal>
       )}
       <div className="discovery-footnote">
         <ShieldCheck size={18} />
@@ -372,6 +464,7 @@ function MatchCard({
   onInvestigate,
   onCounterpart,
   onReport,
+  onView,
 }: {
   recommendation: Recommendation;
   viewer: Profile;
@@ -386,6 +479,7 @@ function MatchCard({
   onInvestigate: () => void;
   onCounterpart: (decision: "interested" | "pass") => void;
   onReport: () => void;
+  onView: () => void;
 }) {
   const [expanded, setExpanded] = useState(false),
     [facts, setFacts] = useState<string[] | null>(null),
@@ -444,6 +538,9 @@ function MatchCard({
           {r.label}
         </span>
         <p className="match-bio">{r.profile.bio}</p>
+        <button type="button" className="text-link" onClick={onView}>
+          Open approved profile <ArrowUpRight size={13} />
+        </button>
         <div className="tag-row">
           {r.commonInterests.slice(0, 3).map((t) => (
             <span key={t}>{title(t)}</span>

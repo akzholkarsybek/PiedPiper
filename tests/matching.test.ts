@@ -14,9 +14,9 @@ const self = () => ({ ...sampleProfile(), approved: true });
 const candidate = (id = "lena") =>
   structuredClone(demoProfiles.find((p) => p.id === id)!);
 describe("Fictional fixtures", () => {
-  it("contains 18 valid, distinct, approved fictional adults", () => {
-    expect(demoProfiles).toHaveLength(18);
-    expect(new Set(demoProfiles.map((p) => p.id)).size).toBe(18);
+  it("contains 180 valid, distinct, approved fictional adults", () => {
+    expect(demoProfiles).toHaveLength(180);
+    expect(new Set(demoProfiles.map((p) => p.id)).size).toBe(180);
     demoProfiles.forEach((p) => {
       expect(profileSchema.safeParse(p).success).toBe(true);
       expect(p.fictional && p.approved).toBe(true);
