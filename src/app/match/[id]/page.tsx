@@ -4,9 +4,12 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { api, getMyId } from "@/lib/client";
+import { NewMessagesButton, useNewBelow } from "@/components/NewMessages";
 import type { ChatMessage, DateView } from "@/lib/types";
 import { Avatar, DemoBadge, Portrait, ScoreRing, Skeleton, VerdictCard } from "@/components/ui";
-import { ArrowLeft, Briefcase, ChevronDown, Heart, LinkIcon, MapPin, Send, Sparkle } from "@/components/icons";
+import { ArrowLeft, Briefcase, ChevronDown, Heart, MapPin, Send, Sparkle } from "@/components/icons";
+
+type DateIdea = { emoji: string; title: string; plan: string; why: string; cost: "free" | "$" | "$$" | "$$$" };
 
 function MatchInner() {
   const { id } = useParams<{ id: string }>();
@@ -15,6 +18,8 @@ function MatchInner() {
   const [text, setText] = useState("");
   const [openers, setOpeners] = useState<string[]>([]);
   const [wingBusy, setWingBusy] = useState(false);
+  const [ideas, setIdeas] = useState<DateIdea[]>([]);
+  const [ideasBusy, setIdeasBusy] = useState(false);
   const [panel, setPanel] = useState<"none" | "why" | "transcript">("none");
   const [error, setError] = useState<string | null>(null);
   const [myId] = useState<string | null>(() => (typeof window === "undefined" ? null : getMyId()));
@@ -36,10 +41,8 @@ function MatchInner() {
     return () => clearInterval(t);
   }, [id, loadMessages]);
 
-  useEffect(() => {
-    const el = scroller.current;
-    if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
-  }, [messages.length, openers.length]);
+  // No automatic scrolling: show a "New messages" button instead (see NewMessages.tsx).
+  const newBelow = useNewBelow(scroller, messages.length);
 
   async function send(e: React.FormEvent) {
     e.preventDefault();
@@ -50,7 +53,8 @@ function MatchInner() {
       await api(`/api/matches/${id}/messages`, { method: "POST", body: JSON.stringify({ text: t }) });
       setText("");
       setOpeners([]);
-      loadMessages();
+      await loadMessages();
+      newBelow.jump(); // you just sent it, so show it (the only time this chat scrolls)
     } catch (err) {
       setError((err as Error).message);
     }
@@ -66,6 +70,25 @@ function MatchInner() {
       setError((err as Error).message);
     }
     setWingBusy(false);
+  }
+
+  async function loadIdeas(refresh = false) {
+    setIdeasBusy(true);
+    setError(null);
+    try {
+      const r = await api<{ ideas: DateIdea[] }>(`/api/matches/${id}/ideas`, { method: "POST", body: JSON.stringify({ refresh }) });
+      setIdeas(r.ideas);
+    } catch (err) {
+      setError((err as Error).message);
+    }
+    setIdeasBusy(false);
+  }
+
+  /** Puts a draft in the message box. The human still edits and sends it. */
+  function suggestIdea(idea: DateIdea) {
+    setText(`How about this for our first date: ${idea.title.toLowerCase()}? ${idea.plan}`);
+    input.current?.focus();
+    input.current?.scrollIntoView({ behavior: "smooth", block: "center" });
   }
 
   function pickOpener(o: string) {
@@ -98,7 +121,7 @@ function MatchInner() {
 
       {/* -------- match header -------- */}
       <div className="card overflow-hidden rise">
-        <Portrait name={other.name} className="h-44 sm:h-52">
+        <Portrait name={other.name} photo={other.photo} className="h-56 sm:h-64">
           <span className="absolute top-4 left-4 inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider rounded-full bg-white/90 text-rose px-2.5 py-1">
             <Heart size={11} filled /> Mutual match
           </span>
@@ -151,10 +174,11 @@ function MatchInner() {
       {panel === "transcript" && (
         <div className="card p-5 space-y-3 rise">
           {date.transcript.map((t, i) => {
-            const name = t.speaker === "a" ? date.a.name : date.b.name;
+            const who = t.speaker === "a" ? date.a : date.b;
+            const name = who.name;
             return (
               <div key={i} className="flex gap-2.5 text-sm">
-                <Avatar name={name} size={26} />
+                <Avatar name={name} photo={who.photo} size={26} />
                 <p className="leading-relaxed">
                   <span className="font-semibold">{name}&apos;s agent </span>
                   <span className="text-muted">·</span> {t.text}
@@ -165,6 +189,50 @@ function MatchInner() {
         </div>
       )}
 
+      {/* -------- real date ideas -------- */}
+      <div className="card p-5 sm:p-6 rise">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="display text-3xl leading-none">Plan your first real date</h2>
+            <p className="hint mt-1.5">Three ideas made for you two, based on what your agents talked about.</p>
+          </div>
+          <button className={`btn text-sm py-2.5 ${ideas.length ? "btn-ghost" : "btn-grad"}`} onClick={() => loadIdeas(ideas.length > 0)} disabled={ideasBusy}>
+            <Sparkle size={15} /> {ideasBusy ? "Thinking…" : ideas.length ? "New ideas" : "Get date ideas"}
+          </button>
+        </div>
+        {ideasBusy && ideas.length === 0 && (
+          <div className="grid sm:grid-cols-3 gap-3 mt-5">
+            {[0, 1, 2].map((i) => (
+              <Skeleton key={i} className="h-44 rounded-2xl" />
+            ))}
+          </div>
+        )}
+        {ideas.length > 0 && (
+          <div className={`grid sm:grid-cols-3 gap-3 mt-5 ${ideasBusy ? "opacity-50" : ""}`}>
+            {ideas.map((idea, i) => (
+              <div key={i} className="rounded-2xl border border-line bg-cream/60 p-4 flex flex-col rise" style={{ animationDelay: `${i * 0.07}s` }}>
+                <div className="flex items-start justify-between gap-2">
+                  <span className="text-3xl leading-none" aria-hidden>
+                    {idea.emoji}
+                  </span>
+                  <span className="text-[11px] font-semibold rounded-full bg-paper border border-line px-2 py-0.5 text-muted">
+                    {idea.cost === "free" ? "Free" : idea.cost}
+                  </span>
+                </div>
+                <div className="font-semibold mt-3 leading-snug">{idea.title}</div>
+                <p className="text-sm leading-relaxed mt-1.5">{idea.plan}</p>
+                {idea.why && <p className="text-xs text-muted leading-relaxed mt-2">{idea.why}</p>}
+                <div className="mt-auto pt-4">
+                  <button className="btn btn-ghost text-sm py-2" onClick={() => suggestIdea(idea)}>
+                    Suggest this
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* -------- chat -------- */}
       <div className="card overflow-hidden flex flex-col">
         <div className="px-5 py-4 border-b border-line flex items-center justify-between gap-3">
@@ -173,33 +241,18 @@ function MatchInner() {
             <p className="hint mt-1">The agents step back. Real messages, from real people.</p>
           </div>
           <div className="hidden sm:flex -space-x-2">
-            <Avatar name={other.name} size={34} ring />
-            <Avatar name={me.name} size={34} ring />
+            <Avatar name={other.name} photo={other.photo} size={34} ring />
+            <Avatar name={me.name} photo={me.photo} size={34} ring />
           </div>
         </div>
 
-        {other.isSeed ? (
-          <div className="p-6 text-center">
-            <div className="w-14 h-14 rounded-full bg-plum-soft text-plum flex items-center justify-center mx-auto">
-              <LinkIcon size={22} />
-            </div>
-            <div className="display text-2xl mt-4">{other.name} is a demo profile</div>
-            <p className="text-sm text-muted mt-2 max-w-sm mx-auto">
-              There&apos;s no real person to talk to here. Copy your invite link and send it to a friend to try the real human
-              handoff.
-            </p>
-            <Link href="/me" className="btn btn-grad mt-5">
-              Get my invite link
-            </Link>
-          </div>
-        ) : (
-          <>
+        <>
             <div ref={scroller} className="h-[46vh] min-h-72 overflow-y-auto px-4 sm:px-5 py-5 space-y-2 bg-gradient-to-b from-cream/50 to-paper">
               {messages.length === 0 && openers.length === 0 && (
                 <div className="h-full flex flex-col items-center justify-center text-center px-4">
                   <div className="flex -space-x-3">
-                    <Avatar name={other.name} size={52} ring />
-                    <Avatar name={me.name} size={52} ring />
+                    <Avatar name={other.name} photo={other.photo} size={52} ring />
+                    <Avatar name={me.name} photo={me.photo} size={52} ring />
                   </div>
                   <div className="display text-2xl mt-4">Someone has to go first 😉</div>
                   <p className="text-sm text-muted mt-1">Stuck? Wingman can suggest an opener based on your agent date.</p>
@@ -227,6 +280,7 @@ function MatchInner() {
                   </div>
                 );
               })}
+              <NewMessagesButton show={newBelow.hasNew} onClick={newBelow.jump} />
             </div>
 
             {openers.length > 0 && (
@@ -271,8 +325,7 @@ function MatchInner() {
                 <Send size={17} />
               </button>
             </form>
-          </>
-        )}
+        </>
         {error && <p className="text-sm text-coral px-5 pb-4">{error}</p>}
       </div>
     </div>

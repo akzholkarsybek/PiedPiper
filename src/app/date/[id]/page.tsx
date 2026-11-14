@@ -4,10 +4,13 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { api, getMyId, streamEvents } from "@/lib/client";
-import type { DateEvent, DateView, PublicProfile, Speaker, Turn, Verdict } from "@/lib/types";
+import type { DateEvent, DateView, PublicProfile, Speaker, Turn, Verdict, Vibe } from "@/lib/types";
+import { venueOf, vibeTone } from "@/lib/venues";
+import { NewMessagesButton, useNewBelow } from "@/components/NewMessages";
 import { Avatar, DemoBadge, HeartRain, Portrait, Skeleton, Typing, VerdictCard } from "@/components/ui";
 import { ArrowLeft, ArrowRight, Heart, Refresh, Send, Whisper } from "@/components/icons";
 
+const WHISPER_IDEAS = ["Ask about their dream trip", "Be more playful", "Ask what they'd do with $10k", "Find out if they want kids"];
 const MIN_GAP_MS = 900; // pace messages so humans can read along
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -24,18 +27,29 @@ function DateInner() {
   const [whisper, setWhisper] = useState("");
   const [whispers, setWhispers] = useState<string[]>([]);
   const [celebrate, setCelebrate] = useState(false);
-  const started = useRef(false);
+  // Which date this page already started. A plain boolean would carry over to the next date,
+  // because cacheComponents reuses this component's state between /date/[id] pages.
+  const started = useRef<string | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const results = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const el = scroller.current;
-    if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
-  }, [turns, typing, phase]);
+  // No automatic scrolling: show a "New messages" button instead (see NewMessages.tsx).
+  const newBelow = useNewBelow(scroller, turns.length);
 
   useEffect(() => {
-    if (started.current) return;
-    started.current = true;
+    if (started.current === id) return;
+    started.current = id;
+    // Fresh start for this date (the component may still hold the previous date's state).
+    // Reset state for a new date id.
+    setView(null);
+    setTurns([]);
+    setTyping(null);
+    setPhase("loading");
+    setVerdicts({ a: null, b: null });
+    setError(null);
+    setWhisper("");
+    setWhispers([]);
+    setCelebrate(false);
     const viewerId = getMyId();
 
     (async () => {
@@ -80,6 +94,8 @@ function DateInner() {
             last = Date.now();
             setTyping(null);
             setTurns((t) => [...t, ev.turn]);
+          } else if (ev.type === "vibe") {
+            setTurns((t) => t.map((x, i) => (i === ev.index ? { ...x, vibe: ev.vibe } : x)));
           } else if (ev.type === "deliberating") {
             setTyping(null);
             setPhase("deliberating");
@@ -142,7 +158,10 @@ function DateInner() {
   const myVerdict = verdicts[mySide];
   const theirVerdict = verdicts[mySide === "a" ? "b" : "a"];
   const nameOf = (s: Speaker) => (s === "a" ? view.a.name : view.b.name);
+  const photoOf = (s: Speaker) => (s === "a" ? view.a.photo : view.b.photo);
   const live = phase === "live" && Boolean(view.viewerSide);
+  const venue = venueOf(view.venue);
+  const vibes = turns.map((t) => t.vibe).filter((v): v is Vibe => Boolean(v));
 
   return (
     <div className="mx-auto max-w-3xl px-3 sm:px-6 py-5 sm:py-8">
@@ -154,8 +173,8 @@ function DateInner() {
             <ArrowLeft size={18} />
           </Link>
           <div className="flex items-center -space-x-2 shrink-0">
-            <Avatar name={other.name} size={40} ring />
-            <Avatar name={me.name} size={40} ring />
+            <Avatar name={other.name} photo={other.photo} size={40} ring />
+            <Avatar name={me.name} photo={me.photo} size={40} ring />
           </div>
           <div className="min-w-0 flex-1">
             <div className="font-semibold truncate flex items-center gap-2">
@@ -169,11 +188,13 @@ function DateInner() {
           <StatusPill phase={phase} />
         </div>
 
+        <ChemistryMeter vibes={vibes} />
+
         {/* messages */}
         <div ref={scroller} className="flex-1 overflow-y-auto px-3 sm:px-5 py-5 space-y-3 bg-gradient-to-b from-cream/60 to-paper">
           <div className="text-center">
             <span className="inline-block text-[11px] font-medium text-muted bg-paper border border-line rounded-full px-3 py-1">
-              ☕ The agents meet at a cozy café
+              {venue.emoji} The agents meet at: {venue.label.toLowerCase()}
             </span>
           </div>
 
@@ -183,7 +204,7 @@ function DateInner() {
             const firstOfRun = !prev || prev.speaker !== t.speaker;
             return (
               <div key={i} className={`flex items-end gap-2 bubble-in ${mine ? "flex-row-reverse" : ""}`}>
-                <div className="w-8 shrink-0">{firstOfRun && <Avatar name={nameOf(t.speaker)} size={32} />}</div>
+                <div className="w-8 shrink-0">{firstOfRun && <Avatar name={nameOf(t.speaker)} photo={photoOf(t.speaker)} size={32} />}</div>
                 <div className={`flex flex-col max-w-[78%] ${mine ? "items-end" : "items-start"}`}>
                   {firstOfRun && (
                     <span className="text-[11px] text-muted mb-1 px-1">
@@ -201,6 +222,7 @@ function DateInner() {
                     {t.text}
                   </div>
                   {!firstOfRun && t.nudged && mine && <span className="text-[11px] text-rose mt-1 px-1">used your whisper 🤫</span>}
+                  <Reaction now={t.vibe} prev={prev?.vibe} />
                 </div>
               </div>
             );
@@ -208,7 +230,7 @@ function DateInner() {
 
           {typing && (
             <div className={`flex items-end gap-2 fade-in ${typing === mySide ? "flex-row-reverse" : ""}`}>
-              <Avatar name={nameOf(typing)} size={32} />
+              <Avatar name={nameOf(typing)} photo={photoOf(typing)} size={32} />
               <div
                 className={`rounded-[20px] px-4 py-3.5 ${
                   typing === mySide ? "bg-plum rounded-br-md" : "bg-paper border border-line rounded-bl-md"
@@ -242,6 +264,7 @@ function DateInner() {
               </button>
             </div>
           )}
+          <NewMessagesButton show={newBelow.hasNew} onClick={newBelow.jump} />
         </div>
 
         {/* composer */}
@@ -253,6 +276,20 @@ function DateInner() {
                   <span key={i} className="shrink-0 text-xs rounded-full bg-rose-soft text-rose px-2.5 py-1">
                     🤫 {w}
                   </span>
+                ))}
+              </div>
+            )}
+            {whispers.length === 0 && !whisper && (
+              <div className="flex gap-1.5 overflow-x-auto no-scrollbar mb-2">
+                {WHISPER_IDEAS.map((w) => (
+                  <button
+                    key={w}
+                    type="button"
+                    className="shrink-0 text-xs rounded-full border border-line bg-paper hover:bg-cream px-2.5 py-1 text-muted hover:text-ink transition-colors"
+                    onClick={() => setWhisper(w)}
+                  >
+                    {w}
+                  </button>
                 ))}
               </div>
             )}
@@ -296,13 +333,13 @@ function DateInner() {
               <HeartRain count={10} />
               <div className="relative">
                 <div className="flex justify-center -space-x-3">
-                  <Avatar name={other.name} size={56} ring />
-                  <Avatar name={me.name} size={56} ring />
+                  <Avatar name={other.name} photo={other.photo} size={56} ring />
+                  <Avatar name={me.name} photo={me.photo} size={56} ring />
                 </div>
                 <div className="display text-5xl mt-4">It&apos;s a match</div>
                 <p className="text-white/85 mt-2 max-w-md mx-auto">
                   Both agents want you two to meet.{" "}
-                  {other.isSeed ? `${other.name} is a demo profile, so invite a real person to try the human chat.` : "Your chat is open."}
+                  Your private chat is open.
                 </p>
                 <Link href={`/match/${view.matchId}`} className="btn bg-white text-plum hover:bg-cream mt-5 px-7">
                   Meet {other.name} <ArrowRight size={16} />
@@ -326,6 +363,7 @@ function DateInner() {
               </div>
             </div>
           )}
+          <DateHighlights turns={turns} nameOf={nameOf} venueLabel={`${venue.emoji} ${venue.label}`} />
           {myVerdict && <VerdictCard v={myVerdict} title={`Your agent's private report on ${other.name}`} />}
           {theirVerdict && <VerdictCard v={theirVerdict} title={`${other.name}'s agent on you (demo profile, shown for transparency)`} />}
         </div>
@@ -342,6 +380,180 @@ function DateInner() {
           }}
         />
       )}
+    </div>
+  );
+}
+
+function ChemistryMeter({ vibes }: { vibes: Vibe[] }) {
+  const now = vibes[vibes.length - 1];
+  const prev = vibes[vibes.length - 2];
+  const score = now?.score ?? 50;
+  const delta = now && prev ? now.score - prev.score : 0;
+  const tone = vibeTone(score);
+  return (
+    <div className="px-4 sm:px-5 py-3 border-b border-line bg-paper/95">
+      <div className="flex items-baseline justify-between gap-3 text-xs">
+        <span className="font-semibold uppercase tracking-wider text-muted">Chemistry</span>
+        <span className={`truncate ${now ? tone.text : "text-muted"}`} aria-live="polite">
+          {now ? now.label : "waiting for the first message…"}
+        </span>
+      </div>
+      <div className="flex items-center gap-3 mt-1.5">
+        <div
+          className="relative flex-1 h-2.5 rounded-full bg-line overflow-hidden"
+          role="meter"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={score}
+          aria-label="Chemistry"
+        >
+          <div
+            className={`absolute inset-y-0 left-0 rounded-full transition-all duration-700 ease-out ${now ? tone.bar : "bg-muted/30"}`}
+            style={{ width: `${score}%` }}
+          />
+        </div>
+        <span className={`w-16 text-right shrink-0 tabular-nums text-sm ${now ? tone.text : "text-muted"}`}>
+          <span className="font-semibold">{now ? now.score : "–"}</span>
+          {delta !== 0 && <span className="text-xs ml-1">{delta > 0 ? `▲${delta}` : `▼${-delta}`}</span>}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/** Small badge under a message that clearly moved the chemistry. */
+function Reaction({ now, prev }: { now?: Vibe; prev?: Vibe }) {
+  if (!now || !prev) return null;
+  const delta = now.score - prev.score;
+  if (delta >= 4)
+    return (
+      <span className="pop text-[11px] font-semibold text-rose bg-rose-soft rounded-full px-2 py-0.5 mt-1" title={now.label}>
+        💗 +{delta}
+      </span>
+    );
+  if (delta <= -3)
+    return (
+      <span className="pop text-[11px] font-semibold text-coral bg-coral-soft rounded-full px-2 py-0.5 mt-1" title={now.label}>
+        😬 −{-delta}
+      </span>
+    );
+  return null;
+}
+
+/** After the date: chemistry over time, plus the messages that moved it most. */
+function DateHighlights({
+  turns,
+  nameOf,
+  venueLabel,
+}: {
+  turns: Turn[];
+  nameOf: (s: Speaker) => string;
+  venueLabel: string;
+}) {
+  const pts = turns.map((t, i) => ({ i, t, score: t.vibe?.score })).filter((p): p is { i: number; t: Turn; score: number } => p.score != null);
+  if (pts.length < 3) return null;
+
+  const W = 640;
+  const H = 150;
+  const padX = 14;
+  const top = 12;
+  const bottom = 126;
+  const x = (k: number) => padX + 26 + (k / (pts.length - 1)) * (W - padX * 2 - 26);
+  // Zoom the axis to the range this date actually used, so small moves are visible.
+  const scores = pts.map((p) => p.score);
+  const lo = Math.max(0, Math.min(...scores) - 10);
+  const hi = Math.min(100, Math.max(...scores) + 10);
+  const y = (score: number) => bottom - ((score - lo) / (hi - lo)) * (bottom - top);
+  const line = pts.map((p, k) => `${k === 0 ? "M" : "L"}${x(k).toFixed(1)},${y(p.score).toFixed(1)}`).join(" ");
+  const area = `${line} L${x(pts.length - 1).toFixed(1)},${bottom} L${x(0).toFixed(1)},${bottom} Z`;
+
+  let best: { k: number; delta: number } | null = null;
+  let worst: { k: number; delta: number } | null = null;
+  for (let k = 1; k < pts.length; k++) {
+    const delta = pts[k].score - pts[k - 1].score;
+    if (delta > 0 && (!best || delta > best.delta)) best = { k, delta };
+    if (delta <= -3 && (!worst || delta < worst.delta)) worst = { k, delta };
+  }
+  const first = pts[0].score;
+  const last = pts[pts.length - 1].score;
+  const peak = Math.max(...pts.map((p) => p.score));
+
+  return (
+    <div className="card p-5 sm:p-6 rise">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h3 className="display text-3xl leading-none">How the date went</h3>
+        <span className="text-xs text-muted">{venueLabel}</span>
+      </div>
+
+      <div className="grid grid-cols-3 gap-3 mt-4 text-center">
+        {[
+          ["Started at", first],
+          ["Peak", peak],
+          ["Ended at", last],
+        ].map(([label, value]) => (
+          <div key={label} className="rounded-2xl bg-cream border border-line py-2.5">
+            <div className="text-xl font-semibold tabular-nums">{value}</div>
+            <div className="text-[11px] text-muted">{label}</div>
+          </div>
+        ))}
+      </div>
+
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full mt-4" role="img" aria-label={`Chemistry went from ${first} to ${last}, with a peak of ${peak}`}>
+        <defs>
+          <linearGradient id="chem-fill" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor="var(--rose)" stopOpacity="0.22" />
+            <stop offset="100%" stopColor="var(--rose)" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        {[10, 20, 30, 40, 50, 60, 70, 80, 90]
+          .filter((g) => g > lo && g < hi)
+          .map((g) => (
+            <g key={g}>
+              <line x1={padX + 22} x2={W - padX} y1={y(g)} y2={y(g)} stroke="var(--line)" strokeDasharray="3 5" />
+              <text x={padX} y={y(g) + 3.5} fontSize="10" fill="var(--muted)">
+                {g}
+              </text>
+            </g>
+          ))}
+        <path d={area} fill="url(#chem-fill)" />
+        <path d={line} fill="none" stroke="var(--rose)" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
+        {pts.map((p, k) => (
+          <circle
+            key={k}
+            cx={x(k)}
+            cy={y(p.score)}
+            r={best?.k === k || worst?.k === k ? 5.5 : 3.5}
+            fill={worst?.k === k ? "var(--coral)" : best?.k === k ? "var(--rose)" : "var(--paper)"}
+            stroke={worst?.k === k ? "var(--coral)" : "var(--rose)"}
+            strokeWidth="2"
+          >
+            <title>{`Message ${p.i + 1} · ${nameOf(p.t.speaker)} · ${p.score}${p.t.vibe?.label ? ` · ${p.t.vibe.label}` : ""}`}</title>
+          </circle>
+        ))}
+        <text x={padX + 26} y={H - 4} fontSize="11" fill="var(--muted)">
+          First message
+        </text>
+        <text x={W - padX} y={H - 4} fontSize="11" fill="var(--muted)" textAnchor="end">
+          Last message
+        </text>
+      </svg>
+
+      <div className={`grid gap-3 mt-3 ${best && worst ? "sm:grid-cols-2" : ""}`}>
+        {best && (
+          <div className="rounded-2xl bg-rose-soft p-4">
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-rose">💗 Best moment · +{best.delta}</div>
+            <p className="text-sm leading-relaxed mt-1.5">“{pts[best.k].t.text}”</p>
+            <div className="text-xs text-muted mt-1.5">{nameOf(pts[best.k].t.speaker)}&apos;s agent</div>
+          </div>
+        )}
+        {worst && (
+          <div className="rounded-2xl bg-coral-soft p-4">
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-coral">😬 Biggest dip · −{-worst.delta}</div>
+            <p className="text-sm leading-relaxed mt-1.5">“{pts[worst.k].t.text}”</p>
+            <div className="text-xs text-muted mt-1.5">{nameOf(pts[worst.k].t.speaker)}&apos;s agent</div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -392,7 +604,7 @@ function MatchCelebration({
       <div className="relative text-center text-white max-w-md w-full">
         <div className="flex justify-center items-center h-56">
           <div className="slide-l">
-            <Portrait name={other.name} className="w-36 h-48 sm:w-40 sm:h-52 rounded-[24px] shadow-lg border-4 border-white/90">
+            <Portrait name={other.name} photo={other.photo} className="w-36 h-48 sm:w-40 sm:h-52 rounded-[24px] shadow-lg border-4 border-white/90">
               <div className="absolute bottom-3 inset-x-0 display text-2xl">{other.name}</div>
             </Portrait>
           </div>
@@ -400,7 +612,7 @@ function MatchCelebration({
             <Heart size={30} filled className="heartbeat" />
           </div>
           <div className="slide-r">
-            <Portrait name={me.name} className="w-36 h-48 sm:w-40 sm:h-52 rounded-[24px] shadow-lg border-4 border-white/90">
+            <Portrait name={me.name} photo={me.photo} className="w-36 h-48 sm:w-40 sm:h-52 rounded-[24px] shadow-lg border-4 border-white/90">
               <div className="absolute bottom-3 inset-x-0 display text-2xl">{me.name}</div>
             </Portrait>
           </div>

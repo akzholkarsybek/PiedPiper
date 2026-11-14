@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { api, setMyId } from "@/lib/client";
 import type { Profile } from "@/lib/types";
 import { Avatar, Portrait, Tag } from "@/components/ui";
+import { VoiceTextarea } from "@/components/VoiceTextarea";
 import { ArrowLeft, ArrowRight, Briefcase, Coins, Heart, Lock, MapPin, Sparkle } from "@/components/icons";
 
 type Form = {
@@ -23,6 +24,8 @@ type Form = {
   moneyHabits: string;
   dealbreakers: string;
   keepPrivate: string;
+  /** Optional photo, resized in the browser to a small JPEG data URL. */
+  photo: string;
 };
 
 const EMPTY: Form = {
@@ -41,6 +44,7 @@ const EMPTY: Form = {
   moneyHabits: "",
   dealbreakers: "",
   keepPrivate: "",
+  photo: "",
 };
 
 const EXAMPLE: Form = {
@@ -61,6 +65,7 @@ const EXAMPLE: Form = {
     "I budget everything and I'm saving for a house. I'm fine splitting the bill. I don't have debt except a car loan. Big spenders make me nervous.",
   dealbreakers: "Smoking, doesn't want kids, rude to waiters",
   keepPrivate: "I was engaged before and it ended badly, so don't bring up exes.",
+  photo: "",
 };
 
 const STEPS = [
@@ -87,6 +92,17 @@ function StartInner() {
   }, [inviteId]);
 
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setF((x) => ({ ...x, [k]: v }));
+  // Until the person edits "Their age range" themselves, keep it centred on their own age
+  // (a fixed 25-40 default silently hid everyone younger than 25).
+  const [rangeTouched, setRangeTouched] = useState(false);
+  function setAge(v: string) {
+    const n = Number(v);
+    setF((x) =>
+      !rangeTouched && Number.isFinite(n) && n >= 18 && n <= 99
+        ? { ...x, age: v, ageMin: String(Math.max(18, n - 5)), ageMax: String(Math.min(99, n + 8)) }
+        : { ...x, age: v },
+    );
+  }
 
   const stepValid = [
     f.name.trim() && Number(f.age) >= 18 && f.city.trim() && f.occupation.trim(),
@@ -123,7 +139,7 @@ function StartInner() {
       <div className="max-w-2xl w-full mx-auto lg:mx-0">
         {inviter && (
           <div className="card p-4 mb-6 flex items-center gap-3 bg-gradient-to-r from-rose-soft to-paper rise">
-            <Avatar name={inviter.name} size={48} ring />
+            <Avatar name={inviter.name} photo={inviter.photo} size={48} ring />
             <div className="min-w-0">
               <div className="font-semibold">{inviter.name} invited you on an agent date</div>
               <div className="text-sm text-muted">Finish your agent and the two of them meet right away.</div>
@@ -160,7 +176,7 @@ function StartInner() {
                     <input className="input" value={f.name} onChange={(e) => set("name", e.target.value)} placeholder="Emma" autoFocus />
                   </Field>
                   <Field label="Age">
-                    <input className="input" type="number" inputMode="numeric" min={18} value={f.age} onChange={(e) => set("age", e.target.value)} placeholder="30" />
+                    <input className="input" type="number" inputMode="numeric" min={18} value={f.age} onChange={(e) => setAge(e.target.value)} placeholder="30" />
                   </Field>
                 </div>
 
@@ -197,9 +213,9 @@ function StartInner() {
 
                 <Field label="Their age range">
                   <div className="flex items-center gap-3 max-w-xs">
-                    <input className="input text-center" type="number" inputMode="numeric" value={f.ageMin} onChange={(e) => set("ageMin", e.target.value)} aria-label="Minimum age" />
+                    <input className="input text-center" type="number" inputMode="numeric" value={f.ageMin} onChange={(e) => (setRangeTouched(true), set("ageMin", e.target.value))} aria-label="Minimum age" />
                     <span className="text-muted">to</span>
-                    <input className="input text-center" type="number" inputMode="numeric" value={f.ageMax} onChange={(e) => set("ageMax", e.target.value)} aria-label="Maximum age" />
+                    <input className="input text-center" type="number" inputMode="numeric" value={f.ageMax} onChange={(e) => (setRangeTouched(true), set("ageMax", e.target.value))} aria-label="Maximum age" />
                   </div>
                 </Field>
 
@@ -211,6 +227,8 @@ function StartInner() {
                     <input className="input" value={f.occupation} onChange={(e) => set("occupation", e.target.value)} placeholder="Nurse, teacher, engineer…" />
                   </Field>
                 </div>
+
+                <PhotoPicker value={f.photo} onChange={(v) => set("photo", v)} />
               </>
             )}
 
@@ -220,20 +238,20 @@ function StartInner() {
                   label="Tell your agent about you"
                   hint={f.aboutMe.trim().length < 20 ? `A couple of sentences at least (${f.aboutMe.trim().length}/20)` : "Nice. The more you, the better it represents you."}
                 >
-                  <textarea
+                  <VoiceTextarea
                     className="input min-h-36"
                     value={f.aboutMe}
-                    onChange={(e) => set("aboutMe", e.target.value)}
+                    onValueChange={(v) => set("aboutMe", v)}
                     placeholder="I'm the friend who plans the group trip… I can't resist a new taco spot…"
                     maxLength={600}
                     autoFocus
                   />
                 </Field>
                 <Field label="Your ideal weekend">
-                  <textarea
+                  <VoiceTextarea
                     className="input min-h-24"
                     value={f.idealWeekend}
-                    onChange={(e) => set("idealWeekend", e.target.value)}
+                    onValueChange={(v) => set("idealWeekend", v)}
                     placeholder="Morning run, farmers market, live music at night"
                     maxLength={600}
                   />
@@ -251,10 +269,10 @@ function StartInner() {
                   hint="Saver or spender? Split the bill? Any debt you're working on? What are you saving for?"
                   icon={<Coins size={16} className="text-plum" />}
                 >
-                  <textarea
+                  <VoiceTextarea
                     className="input min-h-32"
                     value={f.moneyHabits}
-                    onChange={(e) => set("moneyHabits", e.target.value)}
+                    onValueChange={(v) => set("moneyHabits", v)}
                     placeholder="I budget, I'm saving for a house, happy to split the bill…"
                     maxLength={600}
                     autoFocus
@@ -269,10 +287,10 @@ function StartInner() {
                     hint="Your agent knows this but will never bring it up on a first date."
                     icon={<Lock size={16} className="text-plum" />}
                   >
-                    <textarea
+                    <VoiceTextarea
                       className="input min-h-20 bg-paper"
                       value={f.keepPrivate}
-                      onChange={(e) => set("keepPrivate", e.target.value)}
+                      onValueChange={(v) => set("keepPrivate", v)}
                       placeholder="Optional"
                       maxLength={400}
                     />
@@ -325,7 +343,7 @@ function PreviewCard({ f }: { f: Form }) {
     .slice(0, 3);
   return (
     <div className="card overflow-hidden shadow-md">
-      <Portrait name={name} className="h-80">
+      <Portrait name={name} photo={f.photo || null} className="h-80">
         <div className="absolute inset-x-0 bottom-0 p-5 text-white">
           <div className="display text-4xl leading-none">
             {name}
@@ -398,6 +416,69 @@ function Choice<T extends string>({
           </button>
         ))}
       </div>
+    </div>
+  );
+}
+
+/** Shrinks a picked image to a square JPEG (about 20-40 KB) so it can be stored with the profile. */
+async function toSmallJpeg(file: File, size = 320): Promise<string> {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = new Image();
+    img.src = url;
+    await img.decode();
+    const side = Math.min(img.naturalWidth, img.naturalHeight);
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = size;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("no canvas");
+    // centre crop to a square
+    ctx.drawImage(img, (img.naturalWidth - side) / 2, (img.naturalHeight - side) / 2, side, side, 0, 0, size, size);
+    return canvas.toDataURL("image/jpeg", 0.82);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+function PhotoPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [err, setErr] = useState<string | null>(null);
+  async function pick(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setErr(null);
+    if (!file.type.startsWith("image/")) return setErr("Please pick an image file.");
+    try {
+      onChange(await toSmallJpeg(file));
+    } catch {
+      setErr("Couldn't read that image. Try a JPG or PNG.");
+    }
+  }
+  return (
+    <div>
+      <span className="label">
+        Photo <span className="font-normal text-muted">(optional)</span>
+      </span>
+      <div className="flex items-center gap-4">
+        {value ? (
+          // eslint-disable-next-line @next/next/no-img-element -- local data URL preview
+          <img src={value} alt="Your photo" className="w-16 h-16 rounded-full object-cover border border-line" />
+        ) : (
+          <div className="w-16 h-16 rounded-full border-2 border-dashed border-line flex items-center justify-center text-muted text-2xl" aria-hidden>
+            +
+          </div>
+        )}
+        <label className="btn btn-ghost text-sm py-2 cursor-pointer">
+          {value ? "Change photo" : "Add a photo"}
+          <input type="file" accept="image/*" className="sr-only" onChange={pick} />
+        </label>
+        {value && (
+          <button type="button" className="text-sm text-muted hover:text-coral" onClick={() => onChange("")}>
+            Remove
+          </button>
+        )}
+      </div>
+      {err ? <span className="hint block mt-1.5 text-coral">{err}</span> : <span className="hint block mt-1.5">Shown to people your agent dates. Only a small copy is saved.</span>}
     </div>
   );
 }

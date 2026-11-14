@@ -36,6 +36,8 @@ export interface Profile {
   money: MoneyProfile;
   /** Things the agent knows but must NOT bring up on the first date */
   privateNotes: string;
+  /** Photo URL (demo profiles) or small data: URL (uploaded at onboarding). Optional. */
+  photo?: string | null;
   /** Demo profiles that ship with the app (no real human behind them) */
   isSeed: boolean;
   createdAt: number;
@@ -48,6 +50,13 @@ export interface Turn {
   text: string;
   /** true if this turn followed a coach-mode nudge from the human */
   nudged?: boolean;
+  /** live chemistry meter reading right after this message */
+  vibe?: Vibe;
+}
+
+export interface Vibe {
+  score: number;
+  label: string;
 }
 
 export interface Verdict {
@@ -98,6 +107,7 @@ export type PublicProfile = Omit<Profile, "privateNotes">;
 export interface DateView {
   id: string;
   status: DateStatus;
+  venue: string;
   transcript: Turn[];
   a: PublicProfile;
   b: PublicProfile;
@@ -113,6 +123,7 @@ export type DateEvent =
   | { type: "start"; date: DateView }
   | { type: "typing"; speaker: Speaker }
   | { type: "turn"; turn: Turn; index: number }
+  | { type: "vibe"; index: number; vibe: Vibe }
   | { type: "deliberating" }
   | { type: "verdict"; side: Speaker; verdict: Verdict }
   | { type: "done"; date: DateView }

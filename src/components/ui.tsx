@@ -36,8 +36,34 @@ export function gradientFor(key: string) {
   return GRADIENTS[hash(key) % GRADIENTS.length];
 }
 
-export function Avatar({ name, size = 44, ring = false }: { name: string; size?: number; ring?: boolean }) {
+export function Avatar({
+  name,
+  photo,
+  size = 44,
+  ring = false,
+}: {
+  name: string;
+  photo?: string | null;
+  size?: number;
+  ring?: boolean;
+}) {
   const [a, b, c] = gradientFor(name);
+  if (photo)
+    return (
+      // eslint-disable-next-line @next/next/no-img-element -- remote demo photos and data URLs; next/image adds nothing here
+      <img
+        src={photo}
+        alt=""
+        aria-hidden
+        loading="lazy"
+        className="rounded-full object-cover shrink-0 bg-line"
+        style={{
+          width: size,
+          height: size,
+          boxShadow: ring ? `0 0 0 3px var(--paper), 0 0 0 5px ${b}` : "none",
+        }}
+      />
+    );
   return (
     <div
       className="rounded-full flex items-center justify-center text-white shrink-0 display select-none"
@@ -59,14 +85,26 @@ export function Avatar({ name, size = 44, ring = false }: { name: string; size?:
 /** Large photo-style tile for profile cards. */
 export function Portrait({
   name,
+  photo,
   className = "",
   children,
 }: {
   name: string;
+  photo?: string | null;
   className?: string;
   children?: React.ReactNode;
 }) {
   const [a, b, c] = gradientFor(name);
+  if (photo)
+    return (
+      <div className={`relative overflow-hidden bg-line ${className}`}>
+        {/* eslint-disable-next-line @next/next/no-img-element -- remote demo photos and data URLs */}
+        <img src={photo} alt={`Photo of ${name}`} loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
+        <div className="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/70 via-black/25 to-transparent" />
+        <div className="absolute inset-x-0 top-0 h-1/4 bg-gradient-to-b from-black/25 to-transparent" />
+        <div className="relative h-full">{children}</div>
+      </div>
+    );
   const h = hash(name);
   const x = 20 + (h % 60);
   const y = 15 + ((h >> 3) % 40);
@@ -112,7 +150,7 @@ export function DemoBadge({ className = "" }: { className?: string }) {
 export function ProfileSummary({ p, compact = false }: { p: PublicProfile; compact?: boolean }) {
   return (
     <div className="flex gap-3.5 items-start">
-      <Avatar name={p.name} size={compact ? 44 : 56} />
+      <Avatar name={p.name} photo={p.photo} size={compact ? 44 : 56} />
       <div className="min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <span className={`display leading-none ${compact ? "text-2xl" : "text-3xl"}`}>
@@ -273,9 +311,16 @@ export function VerdictCard({ v, title }: { v: Verdict; title: string }) {
           <ul className="space-y-2 text-sm">
             {v.why.map((w, i) => (
               <li key={i} className="flex gap-2.5">
-                <span className="mt-0.5 w-5 h-5 rounded-full bg-green-soft text-green flex items-center justify-center shrink-0">
-                  <Check size={12} strokeWidth={3} />
-                </span>
+                {v.decision === "yes" ? (
+                  <span className="mt-0.5 w-5 h-5 rounded-full bg-green-soft text-green flex items-center justify-center shrink-0">
+                    <Check size={12} strokeWidth={3} />
+                  </span>
+                ) : (
+                  /* On a "no", reasons are a mix of good and bad: a neutral dot, not a green tick. */
+                  <span className="mt-0.5 w-5 h-5 flex items-center justify-center shrink-0" aria-hidden>
+                    <span className="w-1.5 h-1.5 rounded-full bg-muted" />
+                  </span>
+                )}
                 <span className="leading-relaxed">{w}</span>
               </li>
             ))}

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { StatusBadge } from "@/components/StatusBadge";
 import { NavLinks } from "@/components/NavLinks";
+import { ConsentGate } from "@/components/ConsentGate";
 import { Heart, Shield } from "@/components/icons";
 import "./globals.css";
 
@@ -48,6 +49,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           </span>
           <span>Humans make every real decision.</span>
         </footer>
+        <ConsentGate />
       </body>
     </html>
   );

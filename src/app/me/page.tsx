@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { api, getMyId, setMyId } from "@/lib/client";
 import type { Profile, Verdict } from "@/lib/types";
+import { VENUES, venueOf, type VenueId } from "@/lib/venues";
 import { Avatar, DemoBadge, Portrait, ScoreRing, Skeleton, Tag, intentLabel, moneyLabel } from "@/components/ui";
 import { ArrowRight, Briefcase, Check, Coins, Heart, LinkIcon, Lock, MapPin, Message, Sparkle } from "@/components/icons";
 
@@ -12,6 +13,8 @@ type Candidate = { profile: Profile; score: number; reasons: string[] };
 type DateItem = {
   id: string;
   status: string;
+  venue?: string;
+  chemistry?: number | null;
   other: Profile | null;
   myVerdict: Verdict | null;
   mutual: boolean;
@@ -26,6 +29,7 @@ export default function MePage() {
   const [starting, setStarting] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [venue, setVenue] = useState<VenueId>("cafe");
 
   const load = useCallback(
     async (id: string) => {
@@ -48,9 +52,13 @@ export default function MePage() {
   );
 
   useEffect(() => {
+    // cacheComponents keeps this page's state when you navigate away and back. Clear the
+    // "sending your agent…" state from last time (otherwise every Send button stays disabled)
+    // and reload, so new dates and matches show up without a page refresh.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting stale state when the page is shown again
+    setStarting(null);
     const id = getMyId();
     if (!id) router.replace("/start");
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- async fetch, state is set after await
     else load(id);
   }, [load, router]);
 
@@ -61,7 +69,7 @@ export default function MePage() {
     try {
       const { date } = await api<{ date: { id: string } }>("/api/dates", {
         method: "POST",
-        body: JSON.stringify({ aId: me.id, bId: otherId }),
+        body: JSON.stringify({ aId: me.id, bId: otherId, venue }),
       });
       router.push(`/date/${date.id}`);
     } catch (e) {
@@ -108,7 +116,7 @@ export default function MePage() {
                   <Link key={d.id} href={`/match/${d.matchId}`} className="flex flex-col items-center gap-2 shrink-0 group w-20">
                     <div className="rounded-full p-[3px] bg-grad group-hover:scale-105 transition-transform">
                       <div className="rounded-full p-[2px] bg-paper">
-                        <Avatar name={d.other!.name} size={64} />
+                        <Avatar name={d.other!.name} photo={d.other!.photo} size={64} />
                       </div>
                     </div>
                     <span className="text-sm font-medium truncate max-w-full">{d.other!.name}</span>
@@ -126,6 +134,30 @@ export default function MePage() {
               sub="Pre-screened on preferences, intent, values and money style. Send your agent to find out the rest."
             />
             {error && <p className="text-sm text-coral mt-3">{error}</p>}
+
+            {cands.length > 0 && (
+              <div className="mt-5">
+                <div className="text-sm font-medium">Where should the date be?</div>
+                <div className="flex flex-wrap gap-2 mt-2" role="radiogroup" aria-label="Date location">
+                  {VENUES.map((v) => (
+                    <button
+                      key={v.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={venue === v.id}
+                      onClick={() => setVenue(v.id)}
+                      className={`rounded-full border px-3.5 py-1.5 text-sm transition-colors ${
+                        venue === v.id
+                          ? "bg-plum text-white border-plum"
+                          : "bg-paper border-line text-ink hover:bg-cream"
+                      }`}
+                    >
+                      <span aria-hidden>{v.emoji}</span> {v.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {cands.length === 0 ? (
               <div className="card p-8 text-center mt-5">
@@ -166,11 +198,15 @@ export default function MePage() {
                       href={d.matchId ? `/match/${d.matchId}` : `/date/${d.id}`}
                       className="flex items-center gap-3.5 p-4 hover:bg-cream transition-colors"
                     >
-                      <Avatar name={d.other.name} size={44} />
+                      <Avatar name={d.other.name} photo={d.other.photo} size={44} />
                       <div className="flex-1 min-w-0">
                         <div className="font-semibold flex items-center gap-2">
                           {d.other.name}
                           {d.other.isSeed && <DemoBadge />}
+                          <span className="text-xs font-normal text-muted" title={`Date at: ${venueOf(d.venue).label}`}>
+                            {venueOf(d.venue).emoji}
+                            {d.chemistry != null && ` · chemistry ${d.chemistry}`}
+                          </span>
                         </div>
                         <div className="text-sm text-muted truncate">
                           {d.myVerdict
@@ -205,7 +241,7 @@ export default function MePage() {
         {/* sidebar */}
         <aside className="space-y-4 lg:sticky lg:top-24">
           <div className="card overflow-hidden">
-            <Portrait name={me.name} className="h-40">
+            <Portrait name={me.name} photo={me.photo} className="h-40">
               <div className="absolute inset-x-0 bottom-0 p-4 text-white">
                 <div className="text-[11px] uppercase tracking-wider font-semibold text-white/80">Your agent represents</div>
                 <div className="display text-3xl leading-none mt-1">
@@ -296,7 +332,7 @@ function FeaturedCard({ c, busy, onSend }: CardProps) {
   const p = c.profile;
   return (
     <div className="card overflow-hidden grid md:grid-cols-[300px_1fr] rise card-lift">
-      <Portrait name={p.name} className="h-72 md:h-full min-h-72">
+      <Portrait name={p.name} photo={p.photo} className="h-72 md:h-full min-h-72">
         <span className="absolute top-4 left-4 inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider rounded-full bg-white/90 text-rose px-2.5 py-1">
           <Sparkle size={12} /> Top pick
         </span>
@@ -354,7 +390,7 @@ function CandidateCard({ c, busy, onSend, delay }: CardProps & { delay: number }
   const p = c.profile;
   return (
     <div className="card overflow-hidden flex flex-col rise card-lift" style={{ animationDelay: `${delay}s` }}>
-      <Portrait name={p.name} className="h-52">
+      <Portrait name={p.name} photo={p.photo} className="h-60">
         <div className="absolute top-3 right-3 rounded-full bg-black/15 backdrop-blur-md p-1">
           <ScoreRing value={c.score} size={46} stroke={4} light />
         </div>
