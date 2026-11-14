@@ -1,0 +1,424 @@
+"use client";
+
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { api, setMyId } from "@/lib/client";
+import type { Profile } from "@/lib/types";
+import { Avatar, Portrait, Tag } from "@/components/ui";
+import { ArrowLeft, ArrowRight, Briefcase, Coins, Heart, Lock, MapPin, Sparkle } from "@/components/icons";
+
+type Form = {
+  name: string;
+  age: string;
+  gender: "man" | "woman" | "nonbinary";
+  lookingFor: "men" | "women" | "everyone";
+  ageMin: string;
+  ageMax: string;
+  city: string;
+  intent: "serious" | "casual" | "open";
+  occupation: string;
+  aboutMe: string;
+  idealWeekend: string;
+  humor: string;
+  moneyHabits: string;
+  dealbreakers: string;
+  keepPrivate: string;
+};
+
+const EMPTY: Form = {
+  name: "",
+  age: "",
+  gender: "woman",
+  lookingFor: "men",
+  ageMin: "25",
+  ageMax: "40",
+  city: "",
+  intent: "serious",
+  occupation: "",
+  aboutMe: "",
+  idealWeekend: "",
+  humor: "",
+  moneyHabits: "",
+  dealbreakers: "",
+  keepPrivate: "",
+};
+
+const EXAMPLE: Form = {
+  name: "Emma",
+  age: "30",
+  gender: "woman",
+  lookingFor: "men",
+  ageMin: "28",
+  ageMax: "38",
+  city: "Austin, TX",
+  intent: "serious",
+  occupation: "Data analyst at a healthcare company",
+  aboutMe:
+    "I'm the friend who plans the group trip and makes the shared Google Doc. I love trying new taco spots, I run half marathons badly, and I'm learning to make pottery that doesn't look like ashtrays.",
+  idealWeekend: "Morning run, farmers market, cooking something ambitious, live music at night",
+  humor: "Dry and sarcastic, I tease people I like. I hate small talk.",
+  moneyHabits:
+    "I budget everything and I'm saving for a house. I'm fine splitting the bill. I don't have debt except a car loan. Big spenders make me nervous.",
+  dealbreakers: "Smoking, doesn't want kids, rude to waiters",
+  keepPrivate: "I was engaged before and it ended badly, so don't bring up exes.",
+};
+
+const STEPS = [
+  { title: "The basics", sub: "Who your agent is looking for, and where." },
+  { title: "Who you are", sub: "Write like you talk. This becomes your agent's personality." },
+  { title: "Money & privacy", sub: "The talk nobody has on date one, and what stays between you and your agent." },
+];
+
+function StartInner() {
+  const router = useRouter();
+  const params = useSearchParams();
+  const inviteId = params.get("invite");
+  const [step, setStep] = useState(0);
+  const [f, setF] = useState<Form>(EMPTY);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [inviter, setInviter] = useState<Profile | null>(null);
+
+  useEffect(() => {
+    if (!inviteId) return;
+    api<{ profile: Profile }>(`/api/profiles/${inviteId}`)
+      .then((r) => setInviter(r.profile))
+      .catch(() => setInviter(null));
+  }, [inviteId]);
+
+  const set = <K extends keyof Form>(k: K, v: Form[K]) => setF((x) => ({ ...x, [k]: v }));
+
+  const stepValid = [
+    f.name.trim() && Number(f.age) >= 18 && f.city.trim() && f.occupation.trim(),
+    f.aboutMe.trim().length >= 20 && f.idealWeekend.trim(),
+    f.moneyHabits.trim().length >= 10,
+  ];
+
+  async function submit() {
+    setBusy(true);
+    setError(null);
+    try {
+      const { profile } = await api<{ profile: Profile }>("/api/profiles", {
+        method: "POST",
+        body: JSON.stringify({ ...f, age: Number(f.age), ageMin: Number(f.ageMin), ageMax: Number(f.ageMax) }),
+      });
+      setMyId(profile.id);
+      if (inviteId) {
+        const { date } = await api<{ date: { id: string } }>("/api/dates", {
+          method: "POST",
+          body: JSON.stringify({ aId: profile.id, bId: inviteId }),
+        });
+        router.push(`/date/${date.id}`);
+      } else {
+        router.push("/me");
+      }
+    } catch (e) {
+      setError((e as Error).message);
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="mx-auto max-w-6xl px-4 sm:px-6 py-8 sm:py-12 grid lg:grid-cols-[1fr_360px] gap-10 items-start">
+      <div className="max-w-2xl w-full mx-auto lg:mx-0">
+        {inviter && (
+          <div className="card p-4 mb-6 flex items-center gap-3 bg-gradient-to-r from-rose-soft to-paper rise">
+            <Avatar name={inviter.name} size={48} ring />
+            <div className="min-w-0">
+              <div className="font-semibold">{inviter.name} invited you on an agent date</div>
+              <div className="text-sm text-muted">Finish your agent and the two of them meet right away.</div>
+            </div>
+          </div>
+        )}
+
+        {/* progress */}
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2 text-sm text-muted">
+            <span className="font-semibold text-ink">Step {step + 1}</span> of 3
+          </div>
+          <button className="text-sm font-medium text-rose hover:underline inline-flex items-center gap-1" onClick={() => setF(EXAMPLE)} type="button">
+            <Sparkle size={14} /> Fill with an example
+          </button>
+        </div>
+        <div className="flex gap-1.5 mt-3">
+          {STEPS.map((_, i) => (
+            <div key={i} className="h-1.5 flex-1 rounded-full bg-line overflow-hidden">
+              <div className="h-full bg-grad transition-all duration-500" style={{ width: i <= step ? "100%" : "0%" }} />
+            </div>
+          ))}
+        </div>
+
+        <div key={step} className="rise">
+          <h1 className="display text-5xl sm:text-6xl mt-8 leading-none">{STEPS[step].title}</h1>
+          <p className="text-muted mt-3">{STEPS[step].sub}</p>
+
+          <div className="mt-8 space-y-7">
+            {step === 0 && (
+              <>
+                <div className="grid grid-cols-[1fr_110px] gap-4">
+                  <Field label="First name">
+                    <input className="input" value={f.name} onChange={(e) => set("name", e.target.value)} placeholder="Emma" autoFocus />
+                  </Field>
+                  <Field label="Age">
+                    <input className="input" type="number" inputMode="numeric" min={18} value={f.age} onChange={(e) => set("age", e.target.value)} placeholder="30" />
+                  </Field>
+                </div>
+
+                <Choice
+                  label="I am"
+                  value={f.gender}
+                  onChange={(v) => set("gender", v)}
+                  options={[
+                    ["woman", "A woman"],
+                    ["man", "A man"],
+                    ["nonbinary", "Nonbinary"],
+                  ]}
+                />
+                <Choice
+                  label="Interested in"
+                  value={f.lookingFor}
+                  onChange={(v) => set("lookingFor", v)}
+                  options={[
+                    ["men", "Men"],
+                    ["women", "Women"],
+                    ["everyone", "Everyone"],
+                  ]}
+                />
+                <Choice
+                  label="Looking for"
+                  value={f.intent}
+                  onChange={(v) => set("intent", v)}
+                  options={[
+                    ["serious", "💍 Something serious"],
+                    ["casual", "🍸 Something casual"],
+                    ["open", "✨ Open to see"],
+                  ]}
+                />
+
+                <Field label="Their age range">
+                  <div className="flex items-center gap-3 max-w-xs">
+                    <input className="input text-center" type="number" inputMode="numeric" value={f.ageMin} onChange={(e) => set("ageMin", e.target.value)} aria-label="Minimum age" />
+                    <span className="text-muted">to</span>
+                    <input className="input text-center" type="number" inputMode="numeric" value={f.ageMax} onChange={(e) => set("ageMax", e.target.value)} aria-label="Maximum age" />
+                  </div>
+                </Field>
+
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <Field label="City">
+                    <input className="input" value={f.city} onChange={(e) => set("city", e.target.value)} placeholder="Austin, TX" />
+                  </Field>
+                  <Field label="What you do">
+                    <input className="input" value={f.occupation} onChange={(e) => set("occupation", e.target.value)} placeholder="Nurse, teacher, engineer…" />
+                  </Field>
+                </div>
+              </>
+            )}
+
+            {step === 1 && (
+              <>
+                <Field
+                  label="Tell your agent about you"
+                  hint={f.aboutMe.trim().length < 20 ? `A couple of sentences at least (${f.aboutMe.trim().length}/20)` : "Nice. The more you, the better it represents you."}
+                >
+                  <textarea
+                    className="input min-h-36"
+                    value={f.aboutMe}
+                    onChange={(e) => set("aboutMe", e.target.value)}
+                    placeholder="I'm the friend who plans the group trip… I can't resist a new taco spot…"
+                    maxLength={600}
+                    autoFocus
+                  />
+                </Field>
+                <Field label="Your ideal weekend">
+                  <textarea
+                    className="input min-h-24"
+                    value={f.idealWeekend}
+                    onChange={(e) => set("idealWeekend", e.target.value)}
+                    placeholder="Morning run, farmers market, live music at night"
+                    maxLength={600}
+                  />
+                </Field>
+                <Field label="Your sense of humor" hint="e.g. dry, goofy, sarcastic, dad jokes">
+                  <input className="input" value={f.humor} onChange={(e) => set("humor", e.target.value)} placeholder="Dry and sarcastic, I tease people I like" />
+                </Field>
+              </>
+            )}
+
+            {step === 2 && (
+              <>
+                <Field
+                  label="How do you handle money?"
+                  hint="Saver or spender? Split the bill? Any debt you're working on? What are you saving for?"
+                  icon={<Coins size={16} className="text-plum" />}
+                >
+                  <textarea
+                    className="input min-h-32"
+                    value={f.moneyHabits}
+                    onChange={(e) => set("moneyHabits", e.target.value)}
+                    placeholder="I budget, I'm saving for a house, happy to split the bill…"
+                    maxLength={600}
+                    autoFocus
+                  />
+                </Field>
+                <Field label="Dealbreakers" icon={<span aria-hidden>🚩</span>}>
+                  <input className="input" value={f.dealbreakers} onChange={(e) => set("dealbreakers", e.target.value)} placeholder="Smoking, doesn't want kids…" maxLength={400} />
+                </Field>
+                <div className="rounded-3xl bg-plum-soft p-5">
+                  <Field
+                    label="Keep private"
+                    hint="Your agent knows this but will never bring it up on a first date."
+                    icon={<Lock size={16} className="text-plum" />}
+                  >
+                    <textarea
+                      className="input min-h-20 bg-paper"
+                      value={f.keepPrivate}
+                      onChange={(e) => set("keepPrivate", e.target.value)}
+                      placeholder="Optional"
+                      maxLength={400}
+                    />
+                  </Field>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        {error && <p className="text-sm text-coral mt-5">{error}</p>}
+
+        <div className="flex items-center justify-between gap-3 mt-10 pt-6 border-t border-line">
+          <button className="btn btn-ghost" disabled={step === 0 || busy} onClick={() => setStep((s) => s - 1)}>
+            <ArrowLeft size={16} /> Back
+          </button>
+          {step < 2 ? (
+            <button className="btn btn-primary px-7" disabled={!stepValid[step]} onClick={() => setStep((s) => s + 1)}>
+              Continue <ArrowRight size={16} />
+            </button>
+          ) : (
+            <button className="btn btn-grad px-7" disabled={!stepValid[2] || busy} onClick={submit}>
+              <Heart size={16} filled />
+              {inviteId ? "Create agent & start the date" : "Create my agent"}
+            </button>
+          )}
+        </div>
+      </div>
+
+      <aside className="hidden lg:block sticky top-24">
+        <div className="text-xs font-semibold uppercase tracking-wider text-muted mb-3">Your card, as others see it</div>
+        <PreviewCard f={f} />
+        <p className="hint mt-3 leading-relaxed">
+          Your agent writes your bio and voice from your answers. It never invents facts about you.
+        </p>
+      </aside>
+
+      {busy && <TrainingOverlay name={f.name} />}
+    </div>
+  );
+}
+
+function PreviewCard({ f }: { f: Form }) {
+  const name = f.name.trim() || "You";
+  const intent = { serious: "Something serious", casual: "Something casual", open: "Open to see" }[f.intent];
+  const interests = f.idealWeekend
+    .split(/[,;\n]/)
+    .map((x) => x.trim())
+    .filter(Boolean)
+    .slice(0, 3);
+  return (
+    <div className="card overflow-hidden shadow-md">
+      <Portrait name={name} className="h-80">
+        <div className="absolute inset-x-0 bottom-0 p-5 text-white">
+          <div className="display text-4xl leading-none">
+            {name}
+            {f.age && <span className="opacity-80">, {f.age}</span>}
+          </div>
+          <div className="text-sm text-white/85 mt-2 space-y-0.5">
+            {f.occupation && (
+              <div className="flex items-center gap-1.5">
+                <Briefcase size={13} /> {f.occupation}
+              </div>
+            )}
+            {f.city && (
+              <div className="flex items-center gap-1.5">
+                <MapPin size={13} /> {f.city}
+              </div>
+            )}
+          </div>
+        </div>
+      </Portrait>
+      <div className="p-5">
+        <p className={`text-sm leading-relaxed line-clamp-3 ${f.aboutMe ? "" : "text-muted italic"}`}>
+          {f.aboutMe || "Your agent will write a witty one-line bio from your answers."}
+        </p>
+        <div className="flex flex-wrap gap-1.5 mt-3">
+          <Tag tone="rose">{intent}</Tag>
+          {interests.map((i) => (
+            <Tag key={i}>{i}</Tag>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TrainingOverlay({ name }: { name: string }) {
+  return (
+    <div className="fixed inset-0 z-50 glass flex items-center justify-center p-6 fade-in">
+      <div className="text-center max-w-sm">
+        <div className="relative mx-auto w-28 h-28">
+          <div className="absolute inset-0 rounded-full bg-grad opacity-30 blur-xl heartbeat" />
+          <div className="relative w-28 h-28 rounded-full bg-grad text-white flex items-center justify-center shadow-lg heartbeat">
+            <Heart size={44} filled />
+          </div>
+        </div>
+        <h2 className="display text-4xl mt-8">Training {name.trim() ? `${name.trim()}'s` : "your"} agent</h2>
+        <p className="text-muted mt-2">Learning your voice, your values and your money style…</p>
+      </div>
+    </div>
+  );
+}
+
+function Choice<T extends string>({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: T;
+  onChange: (v: T) => void;
+  options: [T, string][];
+}) {
+  return (
+    <div role="group" aria-label={label}>
+      <span className="label">{label}</span>
+      <div className="flex flex-wrap gap-2">
+        {options.map(([v, text]) => (
+          <button key={v} type="button" className="chip" aria-pressed={value === v} onClick={() => onChange(v)}>
+            {text}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Field({ label, hint, icon, children }: { label: string; hint?: string; icon?: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <span className="label flex items-center gap-1.5">
+        {icon}
+        {label}
+      </span>
+      {children}
+      {hint && <span className="hint block mt-1.5">{hint}</span>}
+    </label>
+  );
+}
+
+export default function StartPage() {
+  return (
+    <Suspense>
+      <StartInner />
+    </Suspense>
+  );
+}
