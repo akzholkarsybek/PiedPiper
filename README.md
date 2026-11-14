@@ -42,13 +42,17 @@ No key? The app runs in **MOCK MODE** (badge in the header) so the frontend can 
 
 ## Deploy
 
-1. Push to a **public** GitHub repo (a submission requirement).
-2. **Backend:** deploy `backend/` to any Python host (Render, Railway, Fly.io…).
-   Start command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`. Set `GEMINI_API_KEY` (use a key with
-   billing enabled, because free-tier rate limits can break when several judges test at once).
-   Use one long-running instance, or add **Upstash Redis** (`UPSTASH_REDIS_REST_URL` / `_TOKEN`) if you run several.
-3. **Frontend:** import the repo on [Vercel](https://vercel.com/new) and set `API_URL` to the backend's URL.
-4. Open `/api/status` on the frontend. It should show `{"mock":false,...}`.
+The repo deploys to **Vercel as one project with two services** (see `vercel.json`):
+`app` (Next.js, repo root) serves every page, and `backend` (FastAPI, `backend/`) receives `/api/*`
+with the path unchanged. Both are on one domain, so the browser calls `/api/...` with no CORS setup.
+
+1. Import the repo on [Vercel](https://vercel.com/new) and leave Root Directory at the repo root (where `vercel.json` is).
+2. Set env vars: `GEMINI_API_KEY` (use a key with billing enabled, because free-tier rate limits can break when several
+   judges test at once) and **Upstash Redis** (`UPSTASH_REDIS_REST_URL` / `_TOKEN`). Redis is required on Vercel: the
+   in-memory fallback is per function instance and is lost between requests. Do **not** set `API_URL`.
+3. Open `/api/status`. It should show `{"mock":false,...,"store":"redis"}`.
+
+To run both services locally the same way, run `vercel dev` from the repo root.
 
 A date is about 12 Gemini calls (10 messages + 2 verdicts) and streams for roughly 20–40 seconds. The date runs as a
 background task on the server, so it still finishes if the viewer closes the tab.
