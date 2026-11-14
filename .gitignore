@@ -47,3 +47,6 @@ __pycache__/
 
 # service account keys
 key.json
+
+# local dev data (accounts, dates)
+.data/
