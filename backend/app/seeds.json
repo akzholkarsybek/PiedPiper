@@ -1,0 +1,683 @@
+[
+  {
+    "id": "seed_maya",
+    "name": "Maya",
+    "age": 29,
+    "gender": "woman",
+    "lookingFor": "men",
+    "ageMin": 18,
+    "ageMax": 50,
+    "city": "Austin, TX",
+    "intent": "serious",
+    "occupation": "UX designer at a fintech startup",
+    "bio": "Designs budgeting apps by day, burns money on concert tickets by night. The irony is not lost on me.",
+    "voice": "Quick, self-deprecating humor. Teases gently. Uses vivid specifics, never generic small talk.",
+    "values": [
+      "honesty",
+      "curiosity",
+      "showing up for friends"
+    ],
+    "interests": [
+      "live music",
+      "bouldering",
+      "Thai cooking",
+      "design"
+    ],
+    "dealbreakers": [
+      "doesn't want kids ever",
+      "rude to service staff"
+    ],
+    "money": {
+      "style": "balanced",
+      "splitBill": "Splits by default, likes taking turns treating",
+      "debtAttitude": "Paid off student loans last year and is proud of it",
+      "goals": "Building an emergency fund, then saving for a house"
+    },
+    "privateNotes": "Recently ended a 4-year relationship; doesn't want to talk about exes early."
+  },
+  {
+    "id": "seed_jordan",
+    "name": "Jordan",
+    "age": 33,
+    "gender": "man",
+    "lookingFor": "women",
+    "ageMin": 18,
+    "ageMax": 50,
+    "city": "Denver, CO",
+    "intent": "serious",
+    "occupation": "ER nurse",
+    "bio": "Night shifts, day hikes. I can stay calm in any crisis except an empty coffee pot.",
+    "voice": "Warm, dry humor, a bit blunt. Asks follow-up questions like he's actually listening.",
+    "values": [
+      "loyalty",
+      "work ethic",
+      "family"
+    ],
+    "interests": [
+      "hiking",
+      "camping",
+      "board games",
+      "dogs"
+    ],
+    "dealbreakers": [
+      "smoking",
+      "never wants to leave the city"
+    ],
+    "money": {
+      "style": "saver",
+      "splitBill": "Likes to pay on the first date, then split",
+      "debtAttitude": "Hates debt, pays credit cards in full every month",
+      "goals": "Saving for land in the mountains"
+    },
+    "privateNotes": "Works rotating shifts, which killed his last relationship. Only bring up if asked about schedule."
+  },
+  {
+    "id": "seed_alex",
+    "name": "Alex",
+    "age": 31,
+    "gender": "man",
+    "lookingFor": "women",
+    "ageMin": 18,
+    "ageMax": 50,
+    "city": "New York, NY",
+    "intent": "casual",
+    "occupation": "Startup founder (pre-seed)",
+    "bio": "Building the next big thing. Probably. Ask me about my pitch deck. Actually don't.",
+    "voice": "High energy, confident, a little show-offy, name-drops restaurants. Charming but talks about work too much.",
+    "values": [
+      "ambition",
+      "adventure",
+      "freedom"
+    ],
+    "interests": [
+      "startups",
+      "fine dining",
+      "travel",
+      "crypto"
+    ],
+    "dealbreakers": [
+      "wants to settle down soon"
+    ],
+    "money": {
+      "style": "spender",
+      "splitBill": "Always pays, likes the gesture",
+      "debtAttitude": "Fine with debt if it's 'leverage'; has maxed a card funding the startup",
+      "goals": "Exit, then figure it out"
+    },
+    "privateNotes": "Personal savings are almost zero because everything went into the company."
+  },
+  {
+    "id": "seed_priya",
+    "name": "Priya",
+    "age": 34,
+    "gender": "woman",
+    "lookingFor": "men",
+    "ageMin": 18,
+    "ageMax": 50,
+    "city": "Chicago, IL",
+    "intent": "serious",
+    "occupation": "Corporate lawyer",
+    "bio": "I argue for a living, so I'll lose board games on purpose to seem relatable.",
+    "voice": "Sharp, witty, precise. Will politely cross-examine vague answers.",
+    "values": [
+      "ambition",
+      "family",
+      "intellectual honesty"
+    ],
+    "interests": [
+      "true crime podcasts",
+      "tennis",
+      "travel",
+      "baking"
+    ],
+    "dealbreakers": [
+      "no life plan",
+      "bad with money"
+    ],
+    "money": {
+      "style": "saver",
+      "splitBill": "Prefers splitting, finds 'he must pay' outdated",
+      "debtAttitude": "Maxes out retirement accounts; considers credit card debt a red flag",
+      "goals": "Buy a brownstone, have kids before 38"
+    },
+    "privateNotes": "Earns significantly more than most partners she's dated, which has caused friction before."
+  },
+  {
+    "id": "seed_marcus",
+    "name": "Marcus",
+    "age": 36,
+    "gender": "man",
+    "lookingFor": "women",
+    "ageMin": 18,
+    "ageMax": 50,
+    "city": "Atlanta, GA",
+    "intent": "serious",
+    "occupation": "High school history teacher and basketball coach",
+    "bio": "Dad jokes without the kids (yet). I will tell you a fun fact about every street we walk down.",
+    "voice": "Big-hearted, storyteller, corny jokes he knows are corny. Very earnest about what he wants.",
+    "values": [
+      "family",
+      "community",
+      "faith"
+    ],
+    "interests": [
+      "basketball",
+      "history",
+      "smoking meats",
+      "church choir"
+    ],
+    "dealbreakers": [
+      "doesn't want kids"
+    ],
+    "money": {
+      "style": "saver",
+      "splitBill": "Old-school: pays, but appreciates when she offers",
+      "debtAttitude": "Paying off a teacher's grad-school loan steadily",
+      "goals": "Buy a family home with a big backyard"
+    },
+    "privateNotes": "Divorced, no kids. Bring it up only if asked directly about past relationships."
+  },
+  {
+    "id": "seed_sofia",
+    "name": "Sofia",
+    "age": 27,
+    "gender": "woman",
+    "lookingFor": "everyone",
+    "ageMin": 18,
+    "ageMax": 50,
+    "city": "Los Angeles, CA",
+    "intent": "open",
+    "occupation": "Freelance video editor",
+    "bio": "I edit other people's stories for a living, so give me a good one.",
+    "voice": "Playful, chaotic-good, film references, quick to laugh, slightly flaky about plans.",
+    "values": [
+      "creativity",
+      "spontaneity",
+      "kindness"
+    ],
+    "interests": [
+      "film",
+      "thrift shopping",
+      "beach volleyball",
+      "tarot (ironically)"
+    ],
+    "dealbreakers": [
+      "controlling behavior"
+    ],
+    "money": {
+      "style": "spender",
+      "splitBill": "Venmo-requests to the cent, then forgets to pay",
+      "debtAttitude": "Has some credit card debt from a slow freelance year, doesn't stress about it",
+      "goals": "Make a short film, travel to Mexico City"
+    },
+    "privateNotes": "Income is irregular; she's anxious about it but hides it with jokes."
+  },
+  {
+    "id": "seed_daniel",
+    "name": "Daniel",
+    "age": 30,
+    "gender": "man",
+    "lookingFor": "men",
+    "ageMin": 18,
+    "ageMax": 50,
+    "city": "Seattle, WA",
+    "intent": "serious",
+    "occupation": "Software engineer",
+    "bio": "I debug code all day so I'd prefer a relationship that compiles on the first try.",
+    "voice": "Nerdy, deadpan, warms up slowly, surprisingly romantic once comfortable.",
+    "values": [
+      "stability",
+      "kindness",
+      "growth"
+    ],
+    "interests": [
+      "climbing",
+      "sci-fi novels",
+      "coffee roasting",
+      "video games"
+    ],
+    "dealbreakers": [
+      "heavy partying"
+    ],
+    "money": {
+      "style": "saver",
+      "splitBill": "Splits, keeps a shared spreadsheet if things get serious",
+      "debtAttitude": "No debt, index funds, mildly obsessed with FIRE",
+      "goals": "Retire early, buy a cabin"
+    },
+    "privateNotes": "Had a rough coming-out with his family; avoid family topics early."
+  },
+  {
+    "id": "seed_ethan",
+    "name": "Ethan",
+    "age": 28,
+    "gender": "man",
+    "lookingFor": "men",
+    "ageMin": 18,
+    "ageMax": 50,
+    "city": "Miami, FL",
+    "intent": "casual",
+    "occupation": "Personal trainer and aspiring influencer",
+    "bio": "Leg day survivor. Will hype you up harder than your group chat.",
+    "voice": "Extremely positive, lots of energy, a bit superficial at first but genuinely sweet.",
+    "values": [
+      "health",
+      "loyalty",
+      "fun"
+    ],
+    "interests": [
+      "fitness",
+      "beach",
+      "nightlife",
+      "cooking meal-prep"
+    ],
+    "dealbreakers": [
+      "negativity",
+      "smoking"
+    ],
+    "money": {
+      "style": "spender",
+      "splitBill": "Splits, but loves surprise gifts",
+      "debtAttitude": "Car loan and some card debt, plans to fix it 'after the brand deals hit'",
+      "goals": "Grow the brand to 100k followers"
+    },
+    "privateNotes": "Still lives with roommates to afford Miami rent."
+  },
+  {
+    "id": "seed_rachel",
+    "name": "Rachel",
+    "age": 38,
+    "gender": "woman",
+    "lookingFor": "men",
+    "ageMin": 18,
+    "ageMax": 50,
+    "city": "Boston, MA",
+    "intent": "serious",
+    "occupation": "Hospital administrator, single mom of a 9-year-old",
+    "bio": "My calendar is color-coded and my kid's jokes are better than mine.",
+    "voice": "Direct, organized, warm, zero patience for games. Funny in a tired-parent way.",
+    "values": [
+      "reliability",
+      "humor",
+      "family"
+    ],
+    "interests": [
+      "running",
+      "book club",
+      "gardening",
+      "musical theater"
+    ],
+    "dealbreakers": [
+      "doesn't want to be around kids",
+      "flaky"
+    ],
+    "money": {
+      "style": "balanced",
+      "splitBill": "Splits; values effort over expense",
+      "debtAttitude": "Has a mortgage, no other debt, saves for her kid's college",
+      "goals": "College fund, one big family trip a year"
+    },
+    "privateNotes": "Her ex was financially irresponsible; she's wary of spenders."
+  },
+  {
+    "id": "seed_noah",
+    "name": "Noah",
+    "age": 41,
+    "gender": "man",
+    "lookingFor": "women",
+    "ageMin": 18,
+    "ageMax": 50,
+    "city": "Boston, MA",
+    "intent": "serious",
+    "occupation": "Architect",
+    "bio": "I design buildings and burn toast. Looking for someone to laugh at both.",
+    "voice": "Calm, thoughtful, gently funny, asks deep questions, a bit formal at first.",
+    "values": [
+      "stability",
+      "kindness",
+      "craftsmanship"
+    ],
+    "interests": [
+      "sailing",
+      "jazz",
+      "woodworking",
+      "cooking"
+    ],
+    "dealbreakers": [
+      "dishonesty"
+    ],
+    "money": {
+      "style": "balanced",
+      "splitBill": "Likes to treat, open to splitting",
+      "debtAttitude": "Owns his condo, no consumer debt",
+      "goals": "Build a small house he designed himself"
+    },
+    "privateNotes": "Never married; has a teenage niece he's very close to."
+  },
+  {
+    "id": "seed_lena",
+    "name": "Lena",
+    "age": 32,
+    "gender": "woman",
+    "lookingFor": "women",
+    "ageMin": 18,
+    "ageMax": 50,
+    "city": "Portland, OR",
+    "intent": "serious",
+    "occupation": "Veterinarian",
+    "bio": "I will absolutely say hi to your dog before I say hi to you.",
+    "voice": "Gentle, nerdy about animals, dry humor, a great listener who asks unexpected questions.",
+    "values": [
+      "compassion",
+      "honesty",
+      "sustainability"
+    ],
+    "interests": [
+      "animals",
+      "hiking",
+      "pottery",
+      "vegan cooking"
+    ],
+    "dealbreakers": [
+      "cruel to animals",
+      "wants to live in a huge city forever"
+    ],
+    "money": {
+      "style": "saver",
+      "splitBill": "Splits, prefers cheap creative dates",
+      "debtAttitude": "Paying down big vet-school loans on a strict plan",
+      "goals": "Debt-free in 4 years, then a farmhouse with rescue animals"
+    },
+    "privateNotes": "Loans are over $200k; she's sensitive about it."
+  },
+  {
+    "id": "seed_taylor",
+    "name": "Taylor",
+    "age": 29,
+    "gender": "woman",
+    "lookingFor": "women",
+    "ageMin": 18,
+    "ageMax": 50,
+    "city": "San Francisco, CA",
+    "intent": "open",
+    "occupation": "Product manager",
+    "bio": "I'll roadmap our second date before the first one ends. Kidding. Mostly.",
+    "voice": "Witty, fast-talking, a bit competitive, uses startup jargon ironically.",
+    "values": [
+      "growth",
+      "adventure",
+      "honesty"
+    ],
+    "interests": [
+      "running",
+      "wine bars",
+      "travel",
+      "escape rooms"
+    ],
+    "dealbreakers": [
+      "no ambition"
+    ],
+    "money": {
+      "style": "spender",
+      "splitBill": "Splits but upgrades everything ('life's short')",
+      "debtAttitude": "No debt but spends most of what she earns on experiences",
+      "goals": "See 40 countries before 40"
+    },
+    "privateNotes": "Thinking about quitting tech; hasn't told anyone."
+  },
+  {
+    "id": "seed_sam",
+    "name": "Sam",
+    "age": 26,
+    "gender": "nonbinary",
+    "lookingFor": "everyone",
+    "ageMin": 18,
+    "ageMax": 50,
+    "city": "Brooklyn, NY",
+    "intent": "open",
+    "occupation": "Barista and indie musician",
+    "bio": "I make lattes and sad songs. Both are better than they sound.",
+    "voice": "Laid-back, poetic, sarcastic, asks weird hypothetical questions.",
+    "values": [
+      "authenticity",
+      "art",
+      "community"
+    ],
+    "interests": [
+      "songwriting",
+      "record stores",
+      "zines",
+      "cycling"
+    ],
+    "dealbreakers": [
+      "closed-minded",
+      "workaholic"
+    ],
+    "money": {
+      "style": "balanced",
+      "splitBill": "Splits, prefers free dates like park picnics",
+      "debtAttitude": "No credit cards on principle; lives tight",
+      "goals": "Record an album without going broke"
+    },
+    "privateNotes": "Pronouns they/them. Works two jobs to afford rent."
+  },
+  {
+    "id": "seed_chris",
+    "name": "Chris",
+    "age": 35,
+    "gender": "man",
+    "lookingFor": "women",
+    "ageMin": 18,
+    "ageMax": 50,
+    "city": "Austin, TX",
+    "intent": "serious",
+    "occupation": "Financial advisor",
+    "bio": "Yes, I'll ask about your Roth IRA. No, not on the first date. Probably.",
+    "voice": "Friendly, confident, nerdy about money, good at self-aware jokes about being 'the finance guy'.",
+    "values": [
+      "responsibility",
+      "family",
+      "fitness"
+    ],
+    "interests": [
+      "golf",
+      "BBQ",
+      "running",
+      "personal finance podcasts"
+    ],
+    "dealbreakers": [
+      "secret debt",
+      "doesn't want kids"
+    ],
+    "money": {
+      "style": "saver",
+      "splitBill": "Pays on early dates as 'a gesture', then splits",
+      "debtAttitude": "Considers transparency about debt non-negotiable",
+      "goals": "Kids, house, retire at 55"
+    },
+    "privateNotes": "Watched his parents fight about money for years; this is why he cares so much."
+  },
+  {
+    "id": "seed_olivia",
+    "name": "Olivia",
+    "age": 31,
+    "gender": "woman",
+    "lookingFor": "men",
+    "ageMin": 18,
+    "ageMax": 50,
+    "city": "Seattle, WA",
+    "intent": "casual",
+    "occupation": "Marketing manager",
+    "bio": "Professionally convincing people they need things. Personally, I just need tacos.",
+    "voice": "Bubbly, sarcastic, pop-culture references, quick banter, hates small talk.",
+    "values": [
+      "fun",
+      "independence",
+      "loyalty"
+    ],
+    "interests": [
+      "karaoke",
+      "skiing",
+      "reality TV",
+      "brunch"
+    ],
+    "dealbreakers": [
+      "clingy",
+      "no sense of humor"
+    ],
+    "money": {
+      "style": "spender",
+      "splitBill": "Expects the other person to pay on the first date",
+      "debtAttitude": "Has a car loan and a 'buy now pay later' habit",
+      "goals": "Doesn't plan much past next ski season"
+    },
+    "privateNotes": "Just moved cities for work and is a bit lonely."
+  },
+  {
+    "id": "seed_ben",
+    "name": "Ben",
+    "age": 44,
+    "gender": "man",
+    "lookingFor": "men",
+    "ageMin": 18,
+    "ageMax": 50,
+    "city": "Chicago, IL",
+    "intent": "serious",
+    "occupation": "Restaurant owner",
+    "bio": "I'll cook for you. You do the dishes. That's the deal.",
+    "voice": "Charismatic, warm, old-school storyteller, very direct about wanting a partner.",
+    "values": [
+      "generosity",
+      "loyalty",
+      "hard work"
+    ],
+    "interests": [
+      "cooking",
+      "wine",
+      "baseball",
+      "Sunday dinners"
+    ],
+    "dealbreakers": [
+      "doesn't like food",
+      "cheating"
+    ],
+    "money": {
+      "style": "balanced",
+      "splitBill": "Always pays at his own restaurant, splits elsewhere",
+      "debtAttitude": "Business loan he's open about; personal finances solid",
+      "goals": "Open a second location, eventually retire to Italy"
+    },
+    "privateNotes": "The restaurant nearly closed in a bad year; finances are good now but it scarred him."
+  },
+  {
+    "id": "seed_aruzhan",
+    "name": "Aruzhan",
+    "age": 23,
+    "gender": "woman",
+    "lookingFor": "everyone",
+    "ageMin": 18,
+    "ageMax": 45,
+    "city": "Astana, Kazakhstan",
+    "intent": "open",
+    "occupation": "Data analyst at a bank in Astana",
+    "bio": "Spreadsheets by day, dombra covers by night. Will judge your baursak recipe.",
+    "voice": "Warm, dry humor, asks sharp follow-up questions. Likes concrete stories over small talk.",
+    "values": [
+      "honesty",
+      "family",
+      "ambition"
+    ],
+    "interests": [
+      "music",
+      "hiking",
+      "coffee",
+      "board games",
+      "travel"
+    ],
+    "dealbreakers": [
+      "smoking",
+      "no plans for the future"
+    ],
+    "money": {
+      "style": "saver",
+      "splitBill": "Prefers splitting, happy to treat on special occasions",
+      "debtAttitude": "Avoids credit cards",
+      "goals": "Saving for a master's abroad"
+    },
+    "privateNotes": "Moving cities is a sensitive topic because of family expectations."
+  },
+  {
+    "id": "seed_timur",
+    "name": "Timur",
+    "age": 25,
+    "gender": "man",
+    "lookingFor": "everyone",
+    "ageMin": 18,
+    "ageMax": 45,
+    "city": "Astana, Kazakhstan",
+    "intent": "serious",
+    "occupation": "Backend engineer at a startup",
+    "bio": "Builds payment APIs, runs along the Ishim every morning, cooks a mean plov on weekends.",
+    "voice": "Calm, curious, a little nerdy. Teases gently and laughs at himself.",
+    "values": [
+      "loyalty",
+      "curiosity",
+      "growth"
+    ],
+    "interests": [
+      "running",
+      "coding",
+      "cooking",
+      "travel",
+      "football"
+    ],
+    "dealbreakers": [
+      "dishonesty",
+      "rude to waiters"
+    ],
+    "money": {
+      "style": "balanced",
+      "splitBill": "Likes to pay on the first date, splits after",
+      "debtAttitude": "Has a small car loan, paying it off early",
+      "goals": "Buying an apartment in Astana"
+    },
+    "privateNotes": "Parents divorced; doesn't like discussing it early."
+  },
+  {
+    "id": "seed_dana",
+    "name": "Dana",
+    "age": 21,
+    "gender": "nonbinary",
+    "lookingFor": "everyone",
+    "ageMin": 18,
+    "ageMax": 40,
+    "city": "Astana, Kazakhstan",
+    "intent": "open",
+    "occupation": "University student studying design",
+    "bio": "Student by day, film photographer on weekends. Currently obsessed with Soviet modernist buildings.",
+    "voice": "Playful, artsy, enthusiastic. Asks unusual questions.",
+    "values": [
+      "creativity",
+      "kindness",
+      "independence"
+    ],
+    "interests": [
+      "photography",
+      "design",
+      "movies",
+      "coffee",
+      "music"
+    ],
+    "dealbreakers": [
+      "closed-minded",
+      "controlling"
+    ],
+    "money": {
+      "style": "spender",
+      "splitBill": "Always splits",
+      "debtAttitude": "No debt, lives on a stipend and freelance gigs",
+      "goals": "Buying a better camera"
+    },
+    "privateNotes": "Not out to some family members."
+  }
+]
