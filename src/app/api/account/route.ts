@@ -10,6 +10,11 @@ import {
   requiredMissing,
 } from "@/lib/profile";
 import { recommend, eligibility, missingInformation } from "@/lib/matching";
+import {
+  availabilitySchema,
+  dateCategories,
+  datePreferencesSchema,
+} from "@/lib/planning";
 
 export const dynamic = "force-dynamic";
 function check(error: unknown) {
@@ -35,6 +40,12 @@ export async function GET() {
     [profiles, decisions, matches, messages, questions, blocks].forEach((r) =>
       check(r.error),
     );
+    // Phase 2 (requires 002_phase2.sql). RLS returns only your own planning row
+    // plus rows that mutual, unblocked matches chose to share.
+    const [planning, proposals] = await Promise.all([
+      db.from("member_planning").select("*"),
+      db.from("date_proposals").select("*").order("created_at").limit(200),
+    ]);
     const self = profiles.data?.find((p) => p.id === user.id);
     const profile = self
       ? profileSchema.parse({
@@ -59,6 +70,8 @@ export async function GET() {
         matches: matches.data,
         messages: messages.data,
         questions: questions.data,
+        planning: planning.error ? [] : planning.data,
+        proposals: proposals.error ? [] : proposals.data,
       },
       { headers: { "Cache-Control": "private, no-store" } },
     );
@@ -100,6 +113,24 @@ const actionSchema = z.discriminatedUnion("type", [
     reason: z.string().min(1).max(500),
   }),
   z.object({ type: z.literal("delete") }),
+  z.object({
+    type: z.literal("planning"),
+    availability: availabilitySchema.nullable(),
+    datePreferences: datePreferencesSchema,
+  }),
+  z.object({
+    type: z.literal("propose"),
+    matchId: z.uuid(),
+    category: z.enum(dateCategories),
+    title: z.string().trim().min(1).max(100),
+    start: z.iso.datetime(),
+    end: z.iso.datetime(),
+  }),
+  z.object({
+    type: z.literal("proposal-response"),
+    proposalId: z.uuid(),
+    response: z.enum(["accepted", "declined", "withdrawn"]),
+  }),
 ]);
 export async function POST(req: NextRequest) {
   try {
@@ -220,6 +251,41 @@ export async function POST(req: NextRequest) {
         share: action.consent,
       });
       check(answerError);
+    } else if (action.type === "planning") {
+      const {
+        timeZone,
+        slots,
+        openToMeetingSoon,
+        preference,
+        shareWithMatches,
+      } = action.availability ?? {};
+      const { error } = await db.from("member_planning").upsert({
+        owner_id: user.id,
+        availability: action.availability
+          ? { timeZone, slots, openToMeetingSoon, preference }
+          : null,
+        date_preferences: action.datePreferences,
+        share_availability: !!shareWithMatches,
+        updated_at: new Date().toISOString(),
+      });
+      check(error);
+    } else if (action.type === "propose") {
+      // Membership, impersonation and status are enforced by RLS in 002_phase2.sql.
+      const { error } = await db.from("date_proposals").insert({
+        match_id: action.matchId,
+        proposer_id: user.id,
+        category: action.category,
+        title: action.title,
+        starts_at: action.start,
+        ends_at: action.end,
+      });
+      check(error);
+    } else if (action.type === "proposal-response") {
+      const { error } = await db.rpc("respond_date_proposal", {
+        proposal: action.proposalId,
+        response: action.response,
+      });
+      check(error);
     } else if (action.type === "feedback") {
       const { error } = await db.from("feedback").insert({
         owner_id: user.id,

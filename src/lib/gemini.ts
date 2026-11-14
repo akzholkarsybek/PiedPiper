@@ -10,11 +10,31 @@ export class AIError extends Error {
     super(message);
   }
 }
-export async function generateJSON<T>(
+/** Upper bound for the configured model before trying the fallback model. */
+const PRIMARY_ATTEMPT_MS = 25000;
+const FALLBACK_NOTICE =
+  "The configured Gemini model was not responding, so a supported fallback Gemini model handled this request.";
+let primaryUnhealthyUntil = 0;
+/** Per-call limits. Defaults preserve the Phase 1 behavior. */
+export type GenerateOptions = {
+  maxOutputTokens?: number;
+  timeoutMs?: number;
+  temperature?: number;
+  /** Aborts the request when an orchestration-wide deadline is reached. */
+  signal?: AbortSignal;
+};
+export type JSONGenerator = <T>(
   schema: z.ZodType<T>,
   systemInstruction: string,
   input: unknown,
-): Promise<T & { providerNotice?: string }> {
+  options?: GenerateOptions,
+) => Promise<T & { providerNotice?: string }>;
+export const generateJSON: JSONGenerator = async <T>(
+  schema: z.ZodType<T>,
+  systemInstruction: string,
+  input: unknown,
+  options: GenerateOptions = {},
+): Promise<T & { providerNotice?: string }> => {
   if (!process.env.GEMINI_API_KEY || !process.env.GEMINI_MODEL)
     throw new AIError(
       "NOT_CONFIGURED",
@@ -22,38 +42,60 @@ export async function generateJSON<T>(
       503,
     );
   try {
+    const timeout = options.timeoutMs ?? 35000;
     const client = new GoogleGenAI({
       apiKey: process.env.GEMINI_API_KEY,
-      httpOptions: { timeout: 35000 },
+      httpOptions: { timeout },
     });
     let providerNotice: string | undefined;
-    const request = (model: string) =>
+    const primary = process.env.GEMINI_MODEL,
+      fallback = process.env.GEMINI_FALLBACK_MODEL || "gemini-3.5-flash",
+      canFallback = fallback !== primary;
+    const request = (model: string, ms: number) =>
       client.models.generateContent({
         model,
         contents: JSON.stringify(input),
         config: {
           systemInstruction,
-          temperature: 0.35,
+          temperature: options.temperature ?? 0.35,
           responseMimeType: "application/json",
           responseJsonSchema: z.toJSONSchema(schema),
-          maxOutputTokens: 5000,
+          maxOutputTokens: options.maxOutputTokens ?? 5000,
+          abortSignal: options.signal
+            ? AbortSignal.any([options.signal, AbortSignal.timeout(ms)])
+            : AbortSignal.timeout(ms),
         },
       });
     let result;
-    try {
-      result = await request(process.env.GEMINI_MODEL);
-    } catch (error) {
-      const status = Number(
-        (error as { status?: number; code?: number }).status ??
-          (error as { code?: number }).code,
-      );
-      if (status !== 404) throw error;
-      result = await request(
-        process.env.GEMINI_FALLBACK_MODEL || "gemini-3.5-flash",
-      );
-      providerNotice =
-        "The configured model was unavailable. A supported fallback Gemini model handled this request.";
-    }
+    if (canFallback && Date.now() < primaryUnhealthyUntil) {
+      // Circuit breaker: the configured model recently timed out or returned
+      // a server error, so go straight to the supported fallback for a while.
+      result = await request(fallback, timeout);
+      providerNotice = FALLBACK_NOTICE;
+    } else
+      try {
+        result = await request(
+          primary,
+          canFallback ? Math.min(timeout, PRIMARY_ATTEMPT_MS) : timeout,
+        );
+      } catch (error) {
+        if (options.signal?.aborted) throw error;
+        const status = Number(
+          (error as { status?: number; code?: number }).status ??
+            (error as { code?: number }).code,
+        );
+        const transient =
+          status >= 500 ||
+          (error instanceof Error &&
+            (error.name === "AbortError" || error.name === "TimeoutError"));
+        if (!canFallback || (status !== 404 && !transient)) throw error;
+        if (transient) primaryUnhealthyUntil = Date.now() + 5 * 60 * 1000;
+        result = await request(fallback, timeout);
+        providerNotice =
+          status === 404
+            ? "The configured model was unavailable. A supported fallback Gemini model handled this request."
+            : FALLBACK_NOTICE;
+      }
     const parsed = schema.safeParse(JSON.parse(result.text ?? ""));
     if (!parsed.success)
       throw new AIError(
@@ -98,4 +140,4 @@ export async function generateJSON<T>(
       503,
     );
   }
-}
+};

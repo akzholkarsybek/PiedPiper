@@ -153,6 +153,8 @@ test("public pages fit the viewport and all routes load", async ({ page }) => {
     "/discover",
     "/connections",
     "/profile",
+    "/matchmaker",
+    "/agents",
   ]) {
     const response = await page.goto(path);
     expect(response?.status()).toBe(200);

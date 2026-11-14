@@ -68,6 +68,9 @@ export function eligibility(a: Profile, b: Profile) {
   }
   return { eligible: reasons.length === 0, reasons: [...new Set(reasons)] };
 }
+export function isOpenToIntroductions(p: Profile) {
+  return p.readyToConnect !== false;
+}
 export type Investigation = {
   key: string;
   subjectId: string;
@@ -104,8 +107,12 @@ export function recommend(
   candidates: Profile[],
   weights: Weights = DEFAULT_WEIGHTS,
 ) {
+  // Ready-to-Connect: a paused person neither receives nor appears in new
+  // introductions. This is separate from hard eligibility so existing mutual
+  // connections and messages are preserved while paused.
+  if (!isOpenToIntroductions(a)) return [];
   return candidates
-    .filter((b) => eligibility(a, b).eligible)
+    .filter((b) => isOpenToIntroductions(b) && eligibility(a, b).eligible)
     .map((b) => {
       const commonInterests = intersection(a.interests, b.interests),
         commonValues = intersection(a.values, b.values);

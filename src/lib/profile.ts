@@ -58,6 +58,9 @@ export const profileSchema = z.object({
   approved: z.boolean(),
   fictional: z.boolean(),
   blockedIds: z.array(z.string()).max(1000),
+  /** Ready-to-Connect: when false, the person is paused from new introductions.
+   *  Existing matches and messages are preserved. Defaults to true for older data. */
+  readyToConnect: z.boolean().default(true),
 });
 export type Profile = z.infer<typeof profileSchema>;
 export const emptyAttributes: Profile["attributes"] = {
@@ -90,6 +93,7 @@ export function blankProfile(id = "guest"): Profile {
     approved: false,
     fictional: true,
     blockedIds: [],
+    readyToConnect: true,
   };
 }
 export function requiredMissing(p: Profile): string[] {

@@ -67,6 +67,7 @@ export function ProfileEditor({
           hard: form.getAll("hard"),
         },
         approved: form.get("approved") === "on",
+        readyToConnect: form.get("readyToConnect") === "on",
       });
       const missing = requiredMissing(next);
       if (missing.length)
@@ -295,6 +296,15 @@ export function ProfileEditor({
             </div>
           ))}
         </div>
+        <label className="check-label">
+          <input
+            type="checkbox"
+            name="readyToConnect"
+            defaultChecked={profile.readyToConnect !== false}
+          />
+          Ready to Connect: open to new introductions (pause anytime; existing
+          connections stay)
+        </label>
         <p className="field-help">
           Confirmed dealbreaker conflicts exclude an introduction. An unknown
           answer stays visible as a question, not a presumed match.

@@ -1,7 +1,7 @@
 "use client";
 import { useSyncExternalStore } from "react";
 import { z } from "zod";
-import { demoProfiles } from "./fixtures";
+import { demoPlanning, demoProfiles } from "./fixtures";
 import { profileSchema, type Profile, type Dimension } from "./profile";
 import {
   answerInvestigation,
@@ -9,13 +9,28 @@ import {
   DEFAULT_WEIGHTS,
   eligibility,
   isMutual,
+  isOpenToIntroductions,
   missingInformation,
 } from "./matching";
+import {
+  computeOverlap,
+  planningSchema,
+  proposalSchema,
+  withinWindows,
+  type DateCategory,
+  type Planning,
+  type Proposal,
+} from "./planning";
+import { sessionSchema, type AgentSession } from "./agents";
+import { dateIdeasResultSchema, type DateIdeasResult } from "./dates";
+import { suggestionSchema, type Suggestion } from "./enrichment";
 
-export const storageKey = "pied-piper:fictional-demo:v1";
+/** Current key. Phase 1 (v1) data is migrated on first load, never discarded. */
+export const storageKey = "pied-piper:fictional-demo:v2";
+export const legacyStorageKeys = ["pied-piper:fictional-demo:v1"];
+export const GUEST_ID = "guest";
 const decisionSchema = z.enum(["interested", "pass"]);
-const stateSchema = z.object({
-  version: z.literal(1),
+const v1Fields = {
   profile: profileSchema.nullable(),
   candidates: z.array(profileSchema),
   decisions: z.record(z.string(), decisionSchema),
@@ -43,11 +58,23 @@ const stateSchema = z.object({
     values: z.number(),
     reciprocal: z.number(),
   }),
+};
+const legacyV1Schema = z.object({ version: z.literal(1), ...v1Fields });
+const stateSchema = z.object({
+  version: z.literal(2),
+  ...v1Fields,
+  /** General availability + date preferences, keyed by profile id. */
+  planning: z.record(z.string(), planningSchema),
+  /** Latest agent investigation per fictional peer. */
+  agentSessions: z.record(z.string(), sessionSchema),
+  dateIdeas: z.record(z.string(), dateIdeasResultSchema),
+  proposals: z.array(proposalSchema).max(200),
+  enrichment: z.array(suggestionSchema).max(60),
 });
 export type DemoState = z.infer<typeof stateSchema>;
 export function initialDemo(): DemoState {
   return {
-    version: 1,
+    version: 2,
     profile: null,
     candidates: structuredClone(demoProfiles),
     decisions: {},
@@ -57,7 +84,28 @@ export function initialDemo(): DemoState {
     feedback: [],
     reports: [],
     weights: { ...DEFAULT_WEIGHTS },
+    planning: structuredClone(demoPlanning),
+    agentSessions: {},
+    dateIdeas: {},
+    proposals: [],
+    enrichment: [],
   };
+}
+/** Upgrade any supported saved state to the current schema. Throws if invalid. */
+export function migrateDemo(raw: unknown): DemoState {
+  const version = (raw as { version?: unknown } | null)?.version;
+  if (version === 2) return stateSchema.parse(raw);
+  const v1 = legacyV1Schema.parse(raw);
+  const fresh = initialDemo();
+  return stateSchema.parse({
+    ...v1,
+    version: 2,
+    planning: fresh.planning,
+    agentSessions: {},
+    dateIdeas: {},
+    proposals: [],
+    enrichment: [],
+  });
 }
 export type DemoAction =
   | { type: "profile"; profile: Profile }
@@ -79,7 +127,28 @@ export type DemoAction =
     }
   | { type: "message"; id: string; text: string; synthetic?: boolean }
   | { type: "block"; id: string; report?: string }
-  | { type: "reset-decisions" };
+  | { type: "reset-decisions" }
+  | { type: "ready"; ready: boolean }
+  | { type: "planning"; planning: Planning }
+  | { type: "agent-session"; id: string; session: AgentSession }
+  | { type: "date-ideas"; id: string; result: DateIdeasResult }
+  | {
+      type: "propose";
+      id: string;
+      activity: { category: DateCategory; title: string };
+      start: string;
+      end: string;
+      now?: string;
+    }
+  | {
+      type: "proposal-response";
+      id: string;
+      proposalId: string;
+      response: "accepted" | "declined";
+    }
+  | { type: "withdraw-proposal"; id: string; proposalId: string }
+  | { type: "enrichment-suggestions"; suggestions: Suggestion[] }
+  | { type: "enrichment-decision"; suggestionId: string; approve: boolean };
 export function matched(state: DemoState, id: string) {
   const peer = state.candidates.find((c) => c.id === id);
   return (
@@ -90,6 +159,8 @@ export function matched(state: DemoState, id: string) {
     isMutual(state.decisions[id], state.counterparts[id])
   );
 }
+/** Date planning (availability, ideas, proposals) requires a mutual, unblocked connection. */
+export const canPlanDate = (state: DemoState, id: string) => matched(state, id);
 export function reduceDemo(state: DemoState, action: DemoAction): DemoState {
   if (action.type === "profile")
     return {
@@ -97,17 +168,53 @@ export function reduceDemo(state: DemoState, action: DemoAction): DemoState {
       profile: profileSchema.parse({
         ...action.profile,
         fictional: true,
-        id: "guest",
+        id: GUEST_ID,
       }),
     };
   if (action.type === "reset-decisions")
     return { ...state, decisions: {}, counterparts: {} };
   if (!state.profile) throw new Error("Review and approve your profile first.");
+  if (action.type === "ready")
+    return {
+      ...state,
+      profile: profileSchema.parse({
+        ...state.profile,
+        readyToConnect: action.ready,
+      }),
+    };
+  if (action.type === "planning") {
+    const planning = planningSchema.parse(action.planning);
+    const sharing = !!planning.availability?.shareWithMatches;
+    return {
+      ...state,
+      planning: { ...state.planning, [GUEST_ID]: planning },
+      // Revoking availability consent withdraws open proposals that relied on
+      // it. Already-accepted dates stay until someone withdraws them.
+      proposals: sharing
+        ? state.proposals
+        : state.proposals.map((p) =>
+            p.status === "proposed" ? withdraw(p) : p,
+          ),
+    };
+  }
+  if (action.type === "enrichment-suggestions") {
+    const incoming = action.suggestions.map((x) => suggestionSchema.parse(x));
+    const history = state.enrichment.filter((x) => x.status !== "pending");
+    return { ...state, enrichment: [...incoming, ...history].slice(0, 60) };
+  }
+  if (action.type === "enrichment-decision")
+    return decideSuggestion(state, state.profile, action);
   const peer = state.candidates.find((c) => c.id === action.id);
   if (!peer) throw new Error("This profile is not available.");
   if (action.type === "block")
     return {
       ...state,
+      proposals: state.proposals.map((p) =>
+        p.peerId === action.id &&
+        (p.status === "proposed" || p.status === "accepted")
+          ? withdraw(p)
+          : p,
+      ),
       profile: {
         ...state.profile,
         blockedIds: [...new Set([...state.profile.blockedIds, action.id])],
@@ -127,6 +234,15 @@ export function reduceDemo(state: DemoState, action: DemoAction): DemoState {
     if (!eligibility(state.profile, peer).eligible)
       throw new Error(
         "This introduction no longer meets your mutual requirements.",
+      );
+    if (
+      action.decision === "interested" &&
+      (!isOpenToIntroductions(state.profile) || !isOpenToIntroductions(peer))
+    )
+      throw new Error(
+        isOpenToIntroductions(state.profile)
+          ? `${peer.name} has paused new introductions.`
+          : "You’ve paused new introductions. Turn Ready to Connect back on to express new interest.",
       );
     return {
       ...state,
@@ -212,7 +328,162 @@ export function reduceDemo(state: DemoState, action: DemoAction): DemoState {
       ],
     };
   }
+  if (action.type === "agent-session") {
+    const session = sessionSchema.parse(action.session);
+    if (
+      session.peerId !== peer.id ||
+      session.agents.b.profileId !== peer.id ||
+      session.agents.a.profileId !== state.profile.id
+    )
+      throw new Error(
+        "This investigation does not belong to this introduction.",
+      );
+    if (!eligibility(state.profile, peer).eligible)
+      throw new Error(
+        "Matchmakers only investigate introductions that meet both people’s requirements.",
+      );
+    return {
+      ...state,
+      agentSessions: { ...state.agentSessions, [peer.id]: session },
+    };
+  }
+  // Everything below is first-date planning: mutual connections only.
+  if (!canPlanDate(state, peer.id))
+    throw new Error(
+      "Date planning opens only after both people express interest.",
+    );
+  if (action.type === "date-ideas")
+    return {
+      ...state,
+      dateIdeas: {
+        ...state.dateIdeas,
+        [peer.id]: dateIdeasResultSchema.parse(action.result),
+      },
+    };
+  if (action.type === "propose") {
+    const now = action.now ? new Date(action.now) : new Date();
+    const overlap = computeOverlap(
+      state.planning[GUEST_ID]?.availability,
+      state.planning[peer.id]?.availability,
+      { from: now },
+    );
+    if (overlap.status !== "ok")
+      throw new Error(
+        "Both people need to share overlapping availability before proposing a time.",
+      );
+    if (
+      !withinWindows({ start: action.start, end: action.end }, overlap.windows)
+    )
+      throw new Error("Choose a time inside your shared availability.");
+    const at = now.toISOString();
+    const proposal = proposalSchema.parse({
+      id: crypto.randomUUID(),
+      peerId: peer.id,
+      activity: action.activity,
+      start: new Date(action.start).toISOString(),
+      end: new Date(action.end).toISOString(),
+      proposedBy: "you",
+      status: "proposed",
+      responseSimulated: false,
+      createdAt: at,
+      updatedAt: at,
+    });
+    return {
+      ...state,
+      // A new proposal replaces (withdraws) your previous open one.
+      proposals: [
+        ...state.proposals.map((p) =>
+          p.peerId === peer.id &&
+          p.proposedBy === "you" &&
+          p.status === "proposed"
+            ? withdraw(p)
+            : p,
+        ),
+        proposal,
+      ].slice(-200),
+    };
+  }
+  if (
+    action.type === "proposal-response" ||
+    action.type === "withdraw-proposal"
+  ) {
+    const target = state.proposals.find(
+      (p) => p.id === action.proposalId && p.peerId === peer.id,
+    );
+    if (!target) throw new Error("This proposal is no longer available.");
+    if (action.type === "proposal-response") {
+      if (target.status !== "proposed" || target.proposedBy !== "you")
+        throw new Error("Only an open proposal can be answered.");
+      return replaceProposal(state, {
+        ...target,
+        status: action.response,
+        responseSimulated: true,
+        updatedAt: new Date().toISOString(),
+      });
+    }
+    if (target.status !== "proposed" && target.status !== "accepted")
+      throw new Error("This proposal is already closed.");
+    return replaceProposal(state, withdraw(target));
+  }
   return state;
+}
+function withdraw(p: Proposal): Proposal {
+  return { ...p, status: "withdrawn", updatedAt: new Date().toISOString() };
+}
+function replaceProposal(state: DemoState, next: Proposal): DemoState {
+  return {
+    ...state,
+    proposals: state.proposals.map((p) => (p.id === next.id ? next : p)),
+  };
+}
+/** Applies an enrichment suggestion ONLY when the person explicitly approves it. */
+function decideSuggestion(
+  state: DemoState,
+  profile: Profile,
+  action: { suggestionId: string; approve: boolean },
+): DemoState {
+  const s = state.enrichment.find((x) => x.id === action.suggestionId);
+  if (!s || s.status !== "pending")
+    throw new Error("This suggestion was already reviewed.");
+  const status = action.approve ? ("approved" as const) : ("rejected" as const);
+  const enrichment = state.enrichment.map((x) =>
+    x.id === s.id ? { ...x, status } : x,
+  );
+  if (!action.approve) return { ...state, enrichment };
+  let nextProfile = profile,
+    planning = state.planning;
+  if (s.kind === "interest") {
+    if (!profile.interests.includes(s.value)) {
+      if (profile.interests.length >= 12)
+        throw new Error(
+          "You already have 12 interests. Remove one in your profile first.",
+        );
+      nextProfile = profileSchema.parse({
+        ...profile,
+        interests: [...profile.interests, s.value],
+      });
+    }
+  } else if (s.kind === "summary") {
+    nextProfile = profileSchema.parse({ ...profile, bio: s.value });
+  } else if (s.kind === "activity") {
+    const current: Planning = planning[GUEST_ID] ?? {
+      availability: null,
+      datePreferences: { budget: null, activityTypes: [] },
+    };
+    planning = {
+      ...planning,
+      [GUEST_ID]: planningSchema.parse({
+        ...current,
+        datePreferences: {
+          ...current.datePreferences,
+          activityTypes: [
+            ...new Set([...current.datePreferences.activityTypes, s.value]),
+          ],
+        },
+      }),
+    };
+  }
+  return { ...state, enrichment, profile: nextProfile, planning };
 }
 const serverState = initialDemo();
 let snapshot = serverState,
@@ -227,7 +498,19 @@ function getSnapshot() {
     hydrated = true;
     try {
       const raw = localStorage.getItem(storageKey);
-      if (raw) snapshot = stateSchema.parse(JSON.parse(raw));
+      if (raw) snapshot = migrateDemo(JSON.parse(raw));
+      else {
+        // Safe upgrade: keep Phase 1 progress, then retire the legacy key only
+        // after the migrated state has been written successfully.
+        for (const key of legacyStorageKeys) {
+          const legacy = localStorage.getItem(key);
+          if (!legacy) continue;
+          snapshot = migrateDemo(JSON.parse(legacy));
+          localStorage.setItem(storageKey, JSON.stringify(snapshot));
+          localStorage.removeItem(key);
+          break;
+        }
+      }
     } catch {
       storageError =
         "Saved demo data could not be read. This session is starting fresh.";
@@ -260,6 +543,7 @@ export function deleteDemo() {
   snapshot = initialDemo();
   try {
     localStorage.removeItem(storageKey);
+    for (const key of legacyStorageKeys) localStorage.removeItem(key);
   } catch {
     storageError =
       "Browser storage could not be cleared. Clear site data in browser settings.";

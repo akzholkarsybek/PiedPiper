@@ -15,6 +15,8 @@ import {
   Flag,
   SlidersHorizontal,
   LoaderCircle,
+  MessagesSquare,
+  CirclePause,
 } from "lucide-react";
 import { AppShell, NoProfile } from "./app-shell";
 import { Portrait } from "./portrait";
@@ -53,6 +55,7 @@ export function Discover() {
       </AppShell>
     );
   const profile = state.profile;
+  const paused = profile.readyToConnect === false;
   const ranked = recommend(profile, state.candidates, state.weights),
     available = ranked.filter(
       (r) =>
@@ -105,6 +108,28 @@ export function Discover() {
         </div>
         <span className="banner-flower">✳</span>
       </div>
+      {paused && (
+        <div className="notice paused-notice" role="status">
+          <CirclePause size={19} />
+          <p>
+            <strong>Ready to Connect is paused.</strong> You won’t receive or
+            appear in new introductions. Your connections and messages are
+            unchanged.
+          </p>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() =>
+              act(
+                () => dispatchDemo({ type: "ready", ready: true }),
+                "Welcome back. Ready to Connect is on and new introductions are open.",
+              )
+            }
+          >
+            Resume introductions
+          </Button>
+        </div>
+      )}
       {notice && (
         <div role="status" className="notice success-notice dismiss-notice">
           <p>{notice}</p>
@@ -148,9 +173,11 @@ export function Discover() {
         <div className="empty-state">
           <Heart size={32} />
           <h2>
-            {filter === "interested"
-              ? "A connection starts with interest."
-              : "Room for a different beginning."}
+            {paused
+              ? "Taking a pause."
+              : filter === "interested"
+                ? "A connection starts with interest."
+                : "Room for a different beginning."}
           </h2>
           <p>
             {filter === "interested"
@@ -191,6 +218,7 @@ export function Discover() {
               index={i}
               decision={state.decisions[r.profile.id]}
               isMatched={matched(state, r.profile.id)}
+              hasAgentSession={!!state.agentSessions[r.profile.id]}
               pendingQuestions={r.missing.filter(
                 (q) => !state.questions[q.key],
               )}
@@ -336,6 +364,7 @@ function MatchCard({
   index,
   decision,
   isMatched,
+  hasAgentSession,
   pendingQuestions,
   declinedCount,
   onInterest,
@@ -349,6 +378,7 @@ function MatchCard({
   index: number;
   decision?: string;
   isMatched: boolean;
+  hasAgentSession: boolean;
   pendingQuestions: Investigation[];
   declinedCount: number;
   onInterest: () => void;
@@ -429,6 +459,25 @@ function MatchCard({
           </span>
           <p>{r.evidence.slice(0, 2).join(" ")}</p>
         </div>
+        <Link
+          className="question-prompt agents-prompt"
+          href={`/agents?with=${r.profile.id}`}
+        >
+          <span className="question-icon">
+            <MessagesSquare size={18} />
+          </span>
+          <span>
+            <strong>
+              {hasAgentSession ? "See what our AIs found" : "Let our AIs talk"}
+            </strong>
+            <small>
+              {hasAgentSession
+                ? "Matchmaker conversation saved"
+                : "Two matchmakers · up to 3 questions · approved facts only"}
+            </small>
+          </span>
+          <ArrowUpRight size={18} />
+        </Link>
         {!!pendingQuestions.length && (
           <button className="question-prompt" onClick={onInvestigate}>
             <span className="question-icon">
@@ -579,21 +628,28 @@ function MatchCard({
     </MotionCard>
   );
 }
-function InvestigationModal({
+export function InvestigationModal({
   recommendation: r,
   viewer,
   handled,
   onClose,
   onResult,
+  initialKey,
 }: {
   recommendation: Recommendation;
   viewer: Profile;
   handled: Record<string, string>;
   onClose: () => void;
   onResult: (message: string) => void;
+  initialKey?: string;
 }) {
   const questions = r.missing.filter((q) => !handled[q.key]),
-    [index, setIndex] = useState(0),
+    [index, setIndex] = useState(() =>
+      Math.max(
+        0,
+        questions.findIndex((q) => q.key === initialKey),
+      ),
+    ),
     [answer, setAnswer] = useState(""),
     [consent, setConsent] = useState(false),
     [generated, setGenerated] = useState(""),

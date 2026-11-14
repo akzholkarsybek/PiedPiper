@@ -14,6 +14,7 @@ export const draftSchema = profileSchema.omit({
   approved: true,
   fictional: true,
   blockedIds: true,
+  readyToConnect: true,
 });
 export const onboardingResponseSchema = z.object({
   message: z.string().min(1).max(1500),

@@ -8,6 +8,8 @@ import {
   ShieldCheck,
   ArrowUpRight,
   Sparkles,
+  Bot,
+  MessagesSquare,
 } from "lucide-react";
 import { Brand, PiperMark } from "./brand";
 import { useDemo, getStorageError } from "@/lib/demo-store";
@@ -16,9 +18,31 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const path = usePathname(),
     state = useDemo();
   const nav = [
-    { href: "/discover", label: "For you", icon: Sparkles },
-    { href: "/connections", label: "Connections", icon: MessageCircle },
-    { href: "/profile", label: "Your profile", icon: SlidersHorizontal },
+    {
+      href: "/matchmaker",
+      label: "My AI Matchmaker",
+      short: "Matchmaker",
+      icon: Bot,
+    },
+    { href: "/discover", label: "Discover", short: "Discover", icon: Sparkles },
+    {
+      href: "/agents",
+      label: "Agent Conversations",
+      short: "Agents",
+      icon: MessagesSquare,
+    },
+    {
+      href: "/connections",
+      label: "Connections",
+      short: "Connect",
+      icon: MessageCircle,
+    },
+    {
+      href: "/profile",
+      label: "My Profile",
+      short: "Profile",
+      icon: SlidersHorizontal,
+    },
   ];
   return (
     <div className="app-shell">
@@ -34,7 +58,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             >
               <n.icon size={19} />
               {n.label}
-              {n.href === "/discover" && <span className="nav-dot" />}
+              {n.href === "/agents" && <span className="nav-dot" />}
             </Link>
           ))}
         </nav>
@@ -60,7 +84,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </div>
             <div>
               <strong>{state.profile?.name || "Your space"}</strong>
-              <span>Fictional demo profile</span>
+              <span>
+                {state.profile && state.profile.readyToConnect === false
+                  ? "Paused · fictional demo"
+                  : "Fictional demo profile"}
+              </span>
             </div>
             <Heart size={16} />
           </div>
@@ -99,7 +127,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             className={path === n.href ? "active" : ""}
           >
             <n.icon size={20} />
-            {n.label}
+            {n.short}
           </Link>
         ))}
       </nav>

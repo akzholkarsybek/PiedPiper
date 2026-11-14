@@ -9,12 +9,15 @@ import {
   Flag,
   Heart,
   ArrowRight,
+  CalendarHeart,
 } from "lucide-react";
 import { AppShell, NoProfile } from "./app-shell";
 import { Portrait } from "./portrait";
 import { Button } from "./ui/button";
 import { SafetyModal } from "./discover";
+import { DatePlanner } from "./date-planner";
 import { dispatchDemo, matched, useDemo } from "@/lib/demo-store";
+import { formatWindow, proposalStatusLabel } from "@/lib/planning";
 export function Connections({ initialId }: { initialId?: string }) {
   const state = useDemo(),
     [selected, setSelected] = useState(initialId || ""),
@@ -109,6 +112,9 @@ export function Connections({ initialId }: { initialId?: string }) {
                 <h2>{peer.name}</h2>
                 <span>Fictional person · simulated mutual interest</span>
               </div>
+              <a href="#plan" className="plan-link">
+                <CalendarHeart size={15} /> Plan a date
+              </a>
               <button
                 className="icon-button"
                 aria-label={`Block or report ${peer.name}`}
@@ -126,6 +132,28 @@ export function Connections({ initialId }: { initialId?: string }) {
                   decision.
                 </p>
               </div>
+              {state.proposals
+                .filter(
+                  (p) =>
+                    p.peerId === peer.id &&
+                    (p.status === "proposed" || p.status === "accepted"),
+                )
+                .map((p) => (
+                  <div className="proposal-moment" key={p.id}>
+                    <CalendarHeart size={16} />
+                    <div>
+                      <strong>{p.activity.title}</strong>
+                      <span>
+                        {formatWindow(
+                          p,
+                          state.planning.guest?.availability?.timeZone ??
+                            Intl.DateTimeFormat().resolvedOptions().timeZone,
+                        )}
+                      </span>
+                      <small>{proposalStatusLabel(p)}</small>
+                    </div>
+                  </div>
+                ))}
               {state.messages
                 .filter((m) => m.peerId === peer.id)
                 .map((m) => (
@@ -188,6 +216,14 @@ export function Connections({ initialId }: { initialId?: string }) {
             </div>
           </section>
         </div>
+      )}
+      {peer && state.profile && (
+        <DatePlanner
+          key={peer.id}
+          state={state}
+          profile={state.profile}
+          peer={peer}
+        />
       )}
       {report && peer && (
         <SafetyModal

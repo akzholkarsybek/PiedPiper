@@ -1,4 +1,11 @@
 import { blankProfile, type Profile } from "./profile";
+import {
+  slotsFromGrid,
+  type DateCategory,
+  type Planning,
+  type TimeWindow,
+  type Weekday,
+} from "./planning";
 
 // Fictional characters. No portraits, biographies, or preferences describe real people.
 const seed = [
@@ -337,3 +344,119 @@ export const starterMessages = [
   "I'm Jamie, 32, a man living in New York. I'm interested in women and nonbinary people ages 27 to 36 nearby, and I want a long-term relationship.",
   "I love hiking, cooking, art, and reading. Kindness, curiosity, and family matter to me. I want children, don't smoke, drink socially, and enjoy an active lifestyle. I need a partner who doesn't smoke and wants children too.",
 ];
+
+// ---------- Phase 2: fictional availability and date preferences ----------
+// General weekly patterns only. Cases are chosen deliberately for the demo:
+// overlap (Lena), no overlap (Maya), not shared (Sophie), not entered (Jules),
+// not open to meeting soon (Nora), and a different time zone (Ben, Chicago).
+type Pattern = Partial<Record<Weekday, TimeWindow[]>>;
+const fictionalPlanning = (
+  pattern: Pattern | null,
+  options: {
+    timeZone?: string;
+    share?: boolean;
+    openSoon?: boolean | null;
+    preference?: "weekday" | "weekend" | "either" | null;
+    budget?: Planning["datePreferences"]["budget"];
+    activities?: DateCategory[];
+  } = {},
+): Planning => ({
+  availability: pattern
+    ? {
+        timeZone: options.timeZone ?? "America/New_York",
+        slots: slotsFromGrid(pattern),
+        openToMeetingSoon: options.openSoon ?? true,
+        preference: options.preference ?? "either",
+        shareWithMatches: options.share ?? true,
+      }
+    : null,
+  datePreferences: {
+    budget: options.budget ?? null,
+    activityTypes: options.activities ?? [],
+  },
+});
+const eveningsAndSunday: Pattern = {
+  thu: ["evening"],
+  fri: ["evening"],
+  sun: ["morning", "afternoon"],
+};
+export const demoPlanning: Record<string, Planning> = {
+  lena: fictionalPlanning(
+    {
+      tue: ["evening"],
+      wed: ["evening"],
+      sat: ["morning"],
+      sun: ["afternoon", "evening"],
+    },
+    {
+      preference: "weekend",
+      budget: "low",
+      activities: ["walk", "museum", "coffee"],
+    },
+  ),
+  maya: fictionalPlanning(
+    {
+      mon: ["morning"],
+      tue: ["morning"],
+      wed: ["morning"],
+      thu: ["morning"],
+      fri: ["morning"],
+    },
+    {
+      preference: "weekday",
+      budget: "moderate",
+      activities: ["museum", "restaurant"],
+    },
+  ),
+  sophie: fictionalPlanning(
+    { sat: ["morning", "afternoon"], sun: ["afternoon"] },
+    { share: false, budget: "low", activities: ["walk", "restaurant"] },
+  ),
+  jules: fictionalPlanning(null, { activities: ["cultural-event", "coffee"] }),
+  nora: fictionalPlanning(
+    { sat: ["afternoon"], sun: ["afternoon"] },
+    { openSoon: false, budget: "moderate", activities: ["restaurant"] },
+  ),
+  ben: fictionalPlanning(
+    { sat: ["afternoon", "evening"] },
+    { timeZone: "America/Chicago", activities: ["sport"] },
+  ),
+  ...Object.fromEntries(
+    [
+      "emma",
+      "ava",
+      "claire",
+      "iris",
+      "ellie",
+      "daniel",
+      "marcus",
+      "theo",
+      "oliver",
+      "sam",
+      "alex",
+      "james",
+    ].map((id) => [
+      id,
+      fictionalPlanning(eveningsAndSunday, {
+        budget: "moderate",
+        activities: ["coffee", "walk"],
+      }),
+    ]),
+  ),
+};
+/** Jamie's fictional pattern. Sharing starts OFF: the guest must consent. */
+export function samplePlanning(): Planning {
+  return fictionalPlanning(
+    {
+      wed: ["evening"],
+      sat: ["morning", "afternoon"],
+      sun: ["afternoon"],
+    },
+    {
+      share: false,
+      preference: "weekend",
+      budget: "moderate",
+      activities: ["walk", "museum", "restaurant"],
+    },
+  );
+}
