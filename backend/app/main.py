@@ -26,7 +26,7 @@ from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 from fastapi.responses import JSONResponse, StreamingResponse  # noqa: E402
 
 from . import agents, dates, llm, profiles, store  # noqa: E402
-from .onboard import build_profile, extract_answers  # noqa: E402
+from .onboard import build_profile, coach, extract_answers  # noqa: E402
 from .view import view_date  # noqa: E402
 
 log = logging.getLogger("wingmate")
@@ -173,6 +173,19 @@ async def onboard_extract(req: Request):
     except Exception:  # noqa: BLE001
         log.exception("extract_answers failed")
         return err("Couldn't read that. Try again, or skip and fill the form.", 500)
+
+
+@app.post("/api/onboard/coach")
+async def onboard_coach(req: Request):
+    """Built-in dating coach for "What's your type?". Stateless: the browser sends the chat so far."""
+    b = await body(req)
+    profile = b.get("profile") if isinstance(b.get("profile"), dict) else {}
+    history = [m for m in (b.get("history") or []) if isinstance(m, dict)] if isinstance(b.get("history"), list) else []
+    try:
+        return await coach(profile, str(b.get("draft") or "")[:400], history)
+    except Exception:  # noqa: BLE001
+        log.exception("coach failed")
+        return err("Your coach is unavailable right now. Try again.", 500)
 
 
 @app.get("/api/profiles/{id}")

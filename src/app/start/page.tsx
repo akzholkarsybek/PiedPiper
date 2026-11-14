@@ -6,6 +6,7 @@ import { api, getMyId, setMyId } from "@/lib/client";
 import type { Profile } from "@/lib/types";
 import { Avatar, Portrait, Tag } from "@/components/ui";
 import { VoiceTextarea } from "@/components/VoiceTextarea";
+import { TypeCoach } from "@/components/TypeCoach";
 import { ArrowLeft, ArrowRight, Briefcase, Coins, Heart, Lock, MapPin, Sparkle } from "@/components/icons";
 
 type Form = {
@@ -104,6 +105,12 @@ function formFromProfile(p: Profile): Form {
     idealType: p.idealType ?? "",
     photo: p.photo?.startsWith("data:") ? p.photo : "",
   };
+}
+
+/** What the dating coach may know about them: the answers so far, minus the photo, "keep private" notes and the draft itself. */
+function coachProfile(f: Form): Record<string, string> {
+  const skip = new Set<keyof Form>(["photo", "keepPrivate", "idealType"]);
+  return Object.fromEntries(Object.entries(f).filter(([k]) => !skip.has(k as keyof Form)));
 }
 
 /** Fields the "say it all at once" step can fill (everything except the photo). */
@@ -439,16 +446,19 @@ function StartInner() {
             )}
 
             {step === 4 && (
-              <Field label="What's your type?" hint="Personality, values, lifestyle, looks, energy… whatever matters to you. Optional, but it helps your agent say yes to the right people.">
-                <VoiceTextarea
-                  className="input min-h-36"
-                  value={f.idealType}
-                  onValueChange={(v) => set("idealType", v)}
-                  placeholder="Someone curious who can laugh at themselves, kind to strangers, and actually makes plans…"
-                  maxLength={400}
-                  autoFocus
-                />
-              </Field>
+              <>
+                <Field label="What's your type?" hint="Personality, values, lifestyle, looks, energy… whatever matters to you. Optional, but it helps your agent say yes to the right people.">
+                  <VoiceTextarea
+                    className="input min-h-36"
+                    value={f.idealType}
+                    onValueChange={(v) => set("idealType", v)}
+                    placeholder="Someone curious who can laugh at themselves, kind to strangers, and actually makes plans…"
+                    maxLength={400}
+                    autoFocus
+                  />
+                </Field>
+                <TypeCoach profile={coachProfile(f)} draft={f.idealType} onUse={(t) => set("idealType", t)} />
+              </>
             )}
           </div>
         </div>

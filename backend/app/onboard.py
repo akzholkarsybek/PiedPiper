@@ -170,3 +170,69 @@ async def extract_answers(text: str) -> Dict[str, Any]:
         elif isinstance(v, str) and v.strip():
             out[k] = v.strip()[: _LIMITS.get(k, 600)]
     return out
+
+
+# ------------------------- Dating coach for "What's your type?" -------------------------
+
+COACH_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "reply": {"type": "string", "description": "What the coach says now: 1-3 short sentences, ending with at most ONE question"},
+        "suggestion": {
+            "type": "string",
+            "description": "An updated 'my type' in first person, max 60 words, built only from what they said. Empty string until you know enough.",
+        },
+    },
+    "required": ["reply", "suggestion"],
+}
+
+# What the coach may see about them. Never the "keep private" notes.
+_COACH_FIELDS = ("name", "age", "gender", "lookingFor", "city", "intent", "occupation", "aboutMe", "idealWeekend", "humor", "moneyHabits", "dealbreakers")
+
+_MOCK_QUESTIONS = [
+    "[MOCK] Think of a time you felt really at ease with someone. What were they like?",
+    "[MOCK] Which of these are must-haves, and which are just nice-to-haves?",
+    "[MOCK] What kind of person have you gone for before that didn't work out, and why?",
+]
+
+
+async def coach(profile: Dict[str, Any], draft: str, history: List[Dict[str, str]]) -> Dict[str, str]:
+    """One turn of the built-in dating coach that helps someone figure out (and write) their type."""
+    name = str(profile.get("name") or "").strip() or "them"
+    system = f"""You are a warm, honest and practical dating coach built into a dating app. You're helping {name} figure out their "type": who they actually want to meet. Their AI agent will use the result to decide who to say yes to, so it should be about what really matters to them.
+
+How you coach:
+- Ask ONE question at a time. Keep every reply short: 1-3 sentences, plain and friendly, no lists, no therapy-speak.
+- Help them go past a checklist (height, looks, job title) to what actually matters: values, how they want to feel around someone, lifestyle, humor, how they handle conflict and money.
+- Use what you know about them from their profile to ask sharper questions. If something they want clashes with their own profile or goals (for example they want something serious but describe someone who never commits, or a big spender while they're saving hard), point it out gently and ask about it.
+- Help them separate must-haves from nice-to-haves, and notice patterns ("people like that haven't worked for me before").
+- Never judge, shame or lecture. Never invent facts about them. Don't give generic advice nobody asked for.
+- Reply in the language they write in.
+
+The suggestion:
+- After about 2-3 of their answers (or right away if their draft is already detailed), write "suggestion": their type in first person, max 60 words, in their own voice, using only what they said. Keep improving it as you learn more. Leave it empty until then.
+- When it looks good, say so and tell them they can use it or keep going."""
+
+    about = "\n".join(f"{k}: {profile[k]}" for k in _COACH_FIELDS if str(profile.get(k) or "").strip())
+    chat = "\n".join(f"{'COACH' if m.get('role') == 'coach' else name.upper()}: {str(m.get('text') or '')[:800]}" for m in history[-16:])
+    prompt = f"""THEIR PROFILE SO FAR
+{about or "(nothing yet)"}
+
+THEIR CURRENT DRAFT OF "MY TYPE"
+{draft.strip() or "(empty)"}
+
+CONVERSATION SO FAR
+{chat or "(none yet: open with a short, warm hello and your first question, based on their profile and draft)"}
+
+Write the coach's next reply."""
+
+    def mock() -> Dict[str, str]:
+        turns = sum(1 for m in history if m.get("role") != "coach")
+        reply = _MOCK_QUESTIONS[min(turns, len(_MOCK_QUESTIONS) - 1)]
+        said = " ".join(str(m.get("text") or "") for m in history if m.get("role") != "coach")
+        return {"reply": reply, "suggestion": (draft + " " + said).strip()[:300] if turns >= 2 else ""}
+
+    g = await llm.json(system, prompt, COACH_SCHEMA, mock, 0.8)
+    if not isinstance(g, dict) or not str(g.get("reply") or "").strip():
+        raise RuntimeError("empty coach reply")
+    return {"reply": str(g["reply"]).strip()[:600], "suggestion": str(g.get("suggestion") or "").strip()[:400]}
