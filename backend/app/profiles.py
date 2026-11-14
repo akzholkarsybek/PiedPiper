@@ -38,8 +38,8 @@ async def list_profiles() -> List[Profile]:
 
 
 def public_profile(p: Profile) -> Profile:
-    """Public view: never send privateNotes to the browser for other people's profiles."""
-    return {k: v for k, v in p.items() if k != "privateNotes"}
+    """Public view: never send privateNotes or idealType to the browser for other people's profiles."""
+    return {k: v for k, v in p.items() if k not in ("privateNotes", "idealType")}
 
 
 # ------------------------- Step 1: cheap pre-filter (no AI) -------------------------

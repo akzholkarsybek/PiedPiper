@@ -9,7 +9,13 @@ import type { ChatMessage, DateView } from "@/lib/types";
 import { Avatar, DemoBadge, Portrait, ScoreRing, Skeleton, VerdictCard } from "@/components/ui";
 import { ArrowLeft, Briefcase, ChevronDown, Heart, MapPin, Send, Sparkle } from "@/components/icons";
 
-type DateIdea = { emoji: string; title: string; plan: string; why: string; cost: "free" | "$" | "$$" | "$$$" };
+/** `where`: a real, well-known place in their city suggested by the AI (may be empty). */
+type DateIdea = { emoji: string; title: string; plan: string; why: string; where?: string; cost: "free" | "$" | "$$" | "$$$" };
+
+/** A Google Maps search, so the person can check the place exists and see where it is. */
+function mapsUrl(where: string, city: string) {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(city ? `${where}, ${city}` : where)}`;
+}
 
 function MatchInner() {
   const { id } = useParams<{ id: string }>();
@@ -194,7 +200,7 @@ function MatchInner() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="display text-3xl leading-none">Plan your first real date</h2>
-            <p className="hint mt-1.5">Three ideas made for you two, based on what your agents talked about.</p>
+            <p className="hint mt-1.5">Three ideas made for you two, with real places near you, based on what your agents talked about.</p>
           </div>
           <button className={`btn text-sm py-2.5 ${ideas.length ? "btn-ghost" : "btn-grad"}`} onClick={() => loadIdeas(ideas.length > 0)} disabled={ideasBusy}>
             <Sparkle size={15} /> {ideasBusy ? "Thinking…" : ideas.length ? "New ideas" : "Get date ideas"}
@@ -222,6 +228,16 @@ function MatchInner() {
                 <div className="font-semibold mt-3 leading-snug">{idea.title}</div>
                 <p className="text-sm leading-relaxed mt-1.5">{idea.plan}</p>
                 {idea.why && <p className="text-xs text-muted leading-relaxed mt-2">{idea.why}</p>}
+                {idea.where && (
+                  <a
+                    href={mapsUrl(idea.where, me?.city ?? "")}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-3 inline-flex items-start gap-1.5 text-sm font-medium text-rose hover:underline"
+                  >
+                    <MapPin size={14} className="mt-0.5 shrink-0" /> {idea.where}
+                  </a>
+                )}
                 <div className="mt-auto pt-4">
                   <button className="btn btn-ghost text-sm py-2" onClick={() => suggestIdea(idea)}>
                     Suggest this

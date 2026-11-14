@@ -26,7 +26,7 @@ from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 from fastapi.responses import JSONResponse, StreamingResponse  # noqa: E402
 
 from . import agents, dates, llm, profiles, store  # noqa: E402
-from .onboard import build_profile  # noqa: E402
+from .onboard import build_profile, extract_answers  # noqa: E402
 from .view import view_date  # noqa: E402
 
 log = logging.getLogger("wingmate")
@@ -109,6 +109,7 @@ async def create_profile(req: Request):
         "dealbreakers": s("dealbreakers", 400),
         "keepPrivate": s("keepPrivate", 400),
         "humor": s("humor", 300),
+        "idealType": s("idealType", 400),
     }
     try:
         profile = await build_profile(inp)
@@ -121,6 +122,19 @@ async def create_profile(req: Request):
     except Exception:  # noqa: BLE001
         log.exception("build_profile failed")
         return err("Couldn't build your agent. Try again.", 500)
+
+
+@app.post("/api/onboard/extract")
+async def onboard_extract(req: Request):
+    """"Say it all at once": one typed or spoken answer -> as many onboarding fields as it covers."""
+    text = str((await body(req)).get("text") or "").strip()[:4000]
+    if len(text) < 10:
+        return err("Tell us a bit more first", 400)
+    try:
+        return {"answers": await extract_answers(text)}
+    except Exception:  # noqa: BLE001
+        log.exception("extract_answers failed")
+        return err("Couldn't read that. Try again, or skip and fill the form.", 500)
 
 
 @app.get("/api/profiles/{id}")

@@ -36,6 +36,8 @@ export interface Profile {
   money: MoneyProfile;
   /** Things the agent knows but must NOT bring up on the first date */
   privateNotes: string;
+  /** Their type, in their own words. Only their own agent sees it (owner view only). */
+  idealType?: string;
   /** Photo URL (demo profiles) or small data: URL (uploaded at onboarding). Optional. */
   photo?: string | null;
   /** Demo profiles that ship with the app (no real human behind them) */
@@ -101,7 +103,7 @@ export interface ChatMessage {
   at: number;
 }
 
-export type PublicProfile = Omit<Profile, "privateNotes">;
+export type PublicProfile = Omit<Profile, "privateNotes" | "idealType">;
 
 /** What one viewer is allowed to see of a date (see backend/app/view.py). */
 export interface DateView {

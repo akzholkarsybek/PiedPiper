@@ -24,6 +24,8 @@ type Form = {
   moneyHabits: string;
   dealbreakers: string;
   keepPrivate: string;
+  /** Their type: who they'd like to meet, in their own words. Only their own agent sees it. */
+  idealType: string;
   /** Optional photo, resized in the browser to a small JPEG data URL. */
   photo: string;
 };
@@ -44,6 +46,7 @@ const EMPTY: Form = {
   moneyHabits: "",
   dealbreakers: "",
   keepPrivate: "",
+  idealType: "",
   photo: "",
 };
 
@@ -65,14 +68,24 @@ const EXAMPLE: Form = {
     "I budget everything and I'm saving for a house. I'm fine splitting the bill. I don't have debt except a car loan. Big spenders make me nervous.",
   dealbreakers: "Smoking, doesn't want kids, rude to waiters",
   keepPrivate: "I was engaged before and it ended badly, so don't bring up exes.",
+  idealType: "Someone curious and a little nerdy who can laugh at themselves, is kind to strangers and actually makes plans.",
   photo: "",
 };
 
 const STEPS = [
+  { title: "Say it all at once", sub: "Type or just talk about yourself in one go. Your agent fills in the form for you, and you check it. Or skip and fill it in yourself." },
   { title: "The basics", sub: "Who your agent is looking for, and where." },
   { title: "Who you are", sub: "Write like you talk. This becomes your agent's personality." },
   { title: "Money & privacy", sub: "The talk nobody has on date one, and what stays between you and your agent." },
+  { title: "Your type", sub: "Who are you hoping to meet? Your agent uses this to judge every date. Only your agent sees it." },
 ];
+const LAST = STEPS.length - 1;
+
+/** Fields the "say it all at once" step can fill (everything except the photo). */
+type Answers = Partial<Omit<Record<keyof Form, string | number>, "photo">>;
+
+const DUMP_EXAMPLE =
+  "I'm Emma, 30, a data analyst in Austin. Looking for something serious with a guy around 28 to 38. Weekends are runs, farmers markets and live music. I budget everything and I'm saving for a house, happy to split the bill. Dealbreakers: smoking and being rude to waiters. My type is curious, a bit nerdy, and kind.";
 
 function StartInner() {
   const router = useRouter();
@@ -83,6 +96,8 @@ function StartInner() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [inviter, setInviter] = useState<Profile | null>(null);
+  const [dump, setDump] = useState("");
+  const [filled, setFilled] = useState<number | null>(null);
 
   useEffect(() => {
     if (!inviteId) return;
@@ -104,10 +119,38 @@ function StartInner() {
     );
   }
 
+  async function fillFromDump() {
+    setBusy(true);
+    setError(null);
+    try {
+      const { answers } = await api<{ answers: Answers }>("/api/onboard/extract", { method: "POST", body: JSON.stringify({ text: dump }) });
+      const keys = Object.keys(answers).filter((k) => k in EMPTY && k !== "photo") as (keyof Answers)[];
+      const hasRange = answers.ageMin != null || answers.ageMax != null;
+      if (hasRange) setRangeTouched(true);
+      setF((x) => {
+        const next = { ...x };
+        for (const k of keys) (next as Record<string, string>)[k] = String(answers[k]);
+        const n = Number(answers.age);
+        if (!hasRange && !rangeTouched && n >= 18 && n <= 99) {
+          next.ageMin = String(Math.max(18, n - 5));
+          next.ageMax = String(Math.min(99, n + 8));
+        }
+        return next;
+      });
+      setFilled(keys.length);
+      setStep(1);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+    setBusy(false);
+  }
+
   const stepValid = [
+    true,
     f.name.trim() && Number(f.age) >= 18 && f.city.trim() && f.occupation.trim(),
     f.aboutMe.trim().length >= 20 && f.idealWeekend.trim(),
     f.moneyHabits.trim().length >= 10,
+    true,
   ];
 
   async function submit() {
@@ -150,9 +193,9 @@ function StartInner() {
         {/* progress */}
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-2 text-sm text-muted">
-            <span className="font-semibold text-ink">Step {step + 1}</span> of 3
+            <span className="font-semibold text-ink">Step {step + 1}</span> of {STEPS.length}
           </div>
-          <button className="text-sm font-medium text-rose hover:underline inline-flex items-center gap-1" onClick={() => setF(EXAMPLE)} type="button">
+          <button className="text-sm font-medium text-rose hover:underline inline-flex items-center gap-1" onClick={() => (step === 0 ? setDump(DUMP_EXAMPLE) : setF(EXAMPLE))} type="button">
             <Sparkle size={14} /> Fill with an example
           </button>
         </div>
@@ -171,9 +214,35 @@ function StartInner() {
           <div className="mt-8 space-y-7">
             {step === 0 && (
               <>
+                <Field
+                  label="Tell your agent about you"
+                  hint="Your name, age, city and job, who you want to meet, your weekends, how you handle money, dealbreakers, your type… Anything you skip, you can fill in next."
+                >
+                  <VoiceTextarea
+                    className="input min-h-56"
+                    value={dump}
+                    onValueChange={setDump}
+                    placeholder={DUMP_EXAMPLE}
+                    maxLength={4000}
+                    autoFocus
+                  />
+                </Field>
+              </>
+            )}
+
+            {step === 1 && (
+              <>
+                {filled !== null && (
+                  <div className="rounded-2xl bg-rose-soft px-4 py-3 text-sm flex items-center gap-2">
+                    <Sparkle size={15} className="text-rose shrink-0" />
+                    {filled > 0
+                      ? `Your agent filled in ${filled} answer${filled === 1 ? "" : "s"} from what you said. Check them and fill in the blanks.`
+                      : "Your agent couldn't pick out any answers. Fill them in here, it only takes a minute."}
+                  </div>
+                )}
                 <div className="grid grid-cols-[1fr_110px] gap-4">
                   <Field label="First name">
-                    <input className="input" value={f.name} onChange={(e) => set("name", e.target.value)} placeholder="Emma" autoFocus />
+                    <input className="input" value={f.name} onChange={(e) => set("name", e.target.value)} placeholder="Emma" autoFocus={!f.name} />
                   </Field>
                   <Field label="Age">
                     <input className="input" type="number" inputMode="numeric" min={18} value={f.age} onChange={(e) => setAge(e.target.value)} placeholder="30" />
@@ -232,7 +301,7 @@ function StartInner() {
               </>
             )}
 
-            {step === 1 && (
+            {step === 2 && (
               <>
                 <Field
                   label="Tell your agent about you"
@@ -262,7 +331,7 @@ function StartInner() {
               </>
             )}
 
-            {step === 2 && (
+            {step === 3 && (
               <>
                 <Field
                   label="How do you handle money?"
@@ -298,6 +367,19 @@ function StartInner() {
                 </div>
               </>
             )}
+
+            {step === 4 && (
+              <Field label="What's your type?" hint="Personality, values, lifestyle, looks, energy… whatever matters to you. Optional, but it helps your agent say yes to the right people.">
+                <VoiceTextarea
+                  className="input min-h-36"
+                  value={f.idealType}
+                  onValueChange={(v) => set("idealType", v)}
+                  placeholder="Someone curious who can laugh at themselves, kind to strangers, and actually makes plans…"
+                  maxLength={400}
+                  autoFocus
+                />
+              </Field>
+            )}
           </div>
         </div>
 
@@ -307,12 +389,21 @@ function StartInner() {
           <button className="btn btn-ghost" disabled={step === 0 || busy} onClick={() => setStep((s) => s - 1)}>
             <ArrowLeft size={16} /> Back
           </button>
-          {step < 2 ? (
+          {step === 0 ? (
+            <div className="flex items-center gap-2">
+              <button className="btn btn-ghost" disabled={busy} onClick={() => (setError(null), setStep(1))}>
+                Skip
+              </button>
+              <button className="btn btn-primary px-7" disabled={dump.trim().length < 10 || busy} onClick={fillFromDump}>
+                <Sparkle size={16} /> {busy ? "Reading…" : "Fill my answers"}
+              </button>
+            </div>
+          ) : step < LAST ? (
             <button className="btn btn-primary px-7" disabled={!stepValid[step]} onClick={() => setStep((s) => s + 1)}>
               Continue <ArrowRight size={16} />
             </button>
           ) : (
-            <button className="btn btn-grad px-7" disabled={!stepValid[2] || busy} onClick={submit}>
+            <button className="btn btn-grad px-7" disabled={!stepValid.every(Boolean) || busy} onClick={submit}>
               <Heart size={16} filled />
               {inviteId ? "Create agent & start the date" : "Create my agent"}
             </button>
@@ -328,7 +419,7 @@ function StartInner() {
         </p>
       </aside>
 
-      {busy && <TrainingOverlay name={f.name} />}
+      {busy && step === LAST && <TrainingOverlay name={f.name} />}
     </div>
   );
 }

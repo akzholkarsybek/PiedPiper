@@ -55,6 +55,9 @@ def describe(p: Profile, include_private: bool) -> str:
         f"Interests: {', '.join(p['interests'])}",
         f"Dealbreakers: {', '.join(p['dealbreakers']) or 'none stated'}",
         f"Money style: {m['style']}. Bill: {m['splitBill']}. Debt: {m['debtAttitude']}. Goals: {m['goals']}",
+        f"Their type, in their words (what they're hoping to find; use it to judge fit, don't recite it): {p['idealType']}"
+        if include_private and p.get("idealType")
+        else "",
         f"KEEP PRIVATE (never reveal on this date): {p['privateNotes']}" if include_private and p.get("privateNotes") else "",
     ]
     return "\n".join(x for x in lines if x)
@@ -378,9 +381,10 @@ IDEAS_SCHEMA = {
                     "title": {"type": "string", "description": "Short name, max 6 words"},
                     "plan": {"type": "string", "description": "What you'd actually do, 1-2 simple sentences"},
                     "why": {"type": "string", "description": "Why it fits these two, citing the agent date or profiles, 1 sentence"},
+                    "where": {"type": "string", "description": "A specific real, well-known place, street or area in their city where this works, or empty if not sure"},
                     "cost": {"type": "string", "enum": ["free", "$", "$$", "$$$"]},
                 },
-                "required": ["emoji", "title", "plan", "why", "cost"],
+                "required": ["emoji", "title", "plan", "why", "where", "cost"],
             },
         }
     },
@@ -392,7 +396,8 @@ async def date_ideas(a: Profile, b: Profile, transcript: List[Turn]) -> List[Dic
     """Three concrete ideas for the first REAL date, shared by both people in the match."""
     system = f"""{a['name']} and {b['name']} matched after their AI agents went on a date. Suggest 3 different ideas for their first REAL date.
 - Base each idea on things they both like or joked about on the agent date. Be specific to these two people.
-- Keep it realistic for where they live ({a['city']} / {b['city']}). Describe the kind of place; don't invent business names. If they live in different cities, make at least one idea work online or as a meet-in-the-middle plan.
+- Base it on where they live ({a['city']} / {b['city']}). For each idea, put in "where" one specific real place there that you're confident exists and is well known (a park, market, museum, street, neighborhood, landmark). Prefer long-standing public places over small businesses that may have closed. If you're not sure of a real place, leave "where" empty. Never make up a name.
+- If they live in different cities, make at least one idea work online or as a meet-in-the-middle plan.
 - Respect both money styles: one idea free or very cheap, one mid-priced, and at most one that costs more.
 - Never use anything from private notes. Simple, plain English."""
     prompt = f"{a['name'].upper()}\n{describe(a, False)}\n\n{b['name'].upper()}\n{describe(b, False)}\n\nAGENT DATE\n{transcript_text(a, b, transcript)}"
@@ -402,9 +407,9 @@ async def date_ideas(a: Profile, b: Profile, transcript: List[Turn]) -> List[Dic
         IDEAS_SCHEMA,
         lambda: {
             "ideas": [
-                {"emoji": "☕", "title": "[MOCK] Coffee walk", "plan": "Grab coffee and walk by the river.", "why": "You both like coffee.", "cost": "$"},
-                {"emoji": "🥾", "title": "[MOCK] Easy hike", "plan": "A short morning hike with snacks.", "why": "You both like the outdoors.", "cost": "free"},
-                {"emoji": "🍜", "title": "[MOCK] Cook together", "plan": "Pick a recipe and cook it together.", "why": "You joked about cooking.", "cost": "$$"},
+                {"emoji": "☕", "title": "[MOCK] Coffee walk", "plan": "Grab coffee and walk by the river.", "why": "You both like coffee.", "where": "", "cost": "$"},
+                {"emoji": "🥾", "title": "[MOCK] Easy hike", "plan": "A short morning hike with snacks.", "why": "You both like the outdoors.", "where": "", "cost": "free"},
+                {"emoji": "🍜", "title": "[MOCK] Cook together", "plan": "Pick a recipe and cook it together.", "why": "You joked about cooking.", "where": "", "cost": "$$"},
             ]
         },
         0.9,
@@ -413,5 +418,5 @@ async def date_ideas(a: Profile, b: Profile, transcript: List[Turn]) -> List[Dic
     for i in (res.get("ideas") or [])[:3] if isinstance(res, dict) else []:
         if isinstance(i, dict) and i.get("title") and i.get("plan"):
             cost = i.get("cost") if i.get("cost") in ("free", "$", "$$", "$$$") else "$"
-            out.append({"emoji": str(i.get("emoji") or "✨")[:4], "title": str(i["title"]), "plan": str(i["plan"]), "why": str(i.get("why") or ""), "cost": cost})
+            out.append({"emoji": str(i.get("emoji") or "✨")[:4], "title": str(i["title"]), "plan": str(i["plan"]), "why": str(i.get("why") or ""), "where": str(i.get("where") or "")[:120], "cost": cost})
     return out

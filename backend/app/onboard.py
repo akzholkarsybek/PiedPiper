@@ -68,6 +68,8 @@ For money.style choose saver / balanced / spender from their money answer."""
             "goals": money.get("goals") or "",
         },
         "privateNotes": g.get("privateNotes") or "",
+        # Their own words about who they want. Only their own agent sees it (stripped from public views).
+        "idealType": str(inp.get("idealType") or "").strip()[:400],
         "isSeed": False,
         "createdAt": now_ms(),
     }
@@ -111,3 +113,58 @@ def _mock_generate(i: Dict[str, Any]) -> Dict[str, Any]:
         },
         "privateNotes": i["keepPrivate"],
     }
+
+
+# ------------------------- "Say it all at once": free text -> onboarding answers -------------------------
+
+_TEXT = {"type": "string"}
+EXTRACT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "name": {"type": "string", "description": "First name, or empty"},
+        "age": {"type": "integer", "description": "Their age, or 0 if not said"},
+        "gender": {"type": "string", "enum": ["man", "woman", "nonbinary", "unknown"]},
+        "lookingFor": {"type": "string", "enum": ["men", "women", "everyone", "unknown"], "description": "Who they want to date"},
+        "ageMin": {"type": "integer", "description": "Youngest age they'd date, or 0 if not said"},
+        "ageMax": {"type": "integer", "description": "Oldest age they'd date, or 0 if not said"},
+        "city": {"type": "string", "description": "City they live in, e.g. 'Almaty' or 'Austin, TX', or empty"},
+        "intent": {"type": "string", "enum": ["serious", "casual", "open", "unknown"]},
+        "occupation": _TEXT,
+        "aboutMe": {"type": "string", "description": "Who they are, personality, hobbies, in first person, their words"},
+        "idealWeekend": _TEXT,
+        "humor": _TEXT,
+        "moneyHabits": {"type": "string", "description": "Saving/spending, splitting the bill, debt, money goals"},
+        "dealbreakers": _TEXT,
+        "keepPrivate": {"type": "string", "description": "Only things they explicitly said to keep private / not bring up"},
+        "idealType": {"type": "string", "description": "What kind of person they like / their type"},
+    },
+}
+_FIELDS = list(EXTRACT_SCHEMA["properties"])
+EXTRACT_SCHEMA["required"] = _FIELDS
+
+_LIMITS = {"name": 40, "city": 60, "occupation": 80, "humor": 300, "dealbreakers": 400, "keepPrivate": 400, "idealType": 400}
+_ENUMS = {"gender": ("man", "woman", "nonbinary"), "lookingFor": ("men", "women", "everyone"), "intent": ("serious", "casual", "open")}
+
+
+async def extract_answers(text: str) -> Dict[str, Any]:
+    """Fills as many onboarding fields as possible from one free-form answer (typed or spoken).
+    Returns only the fields the person actually covered; the form shows the rest as blanks to fill in."""
+    system = """You read what a person said about themselves for a dating app (often a voice transcript, maybe in Russian or Kazakh) and sort it into the app's onboarding fields.
+- Only use what they actually said. Never invent or guess. Leave a field empty ("" / 0 / "unknown") if they didn't cover it.
+- Write text fields in first person, keeping their wording, tone and humor. Write them in English.
+- Fix obvious speech-to-text mistakes, but don't add anything."""
+    g = await llm.json(system, text, EXTRACT_SCHEMA, lambda: {"aboutMe": text}, 0.2)
+    if not isinstance(g, dict):
+        return {}
+    out: Dict[str, Any] = {}
+    for k in _FIELDS:
+        v = g.get(k)
+        if k in ("age", "ageMin", "ageMax"):
+            if isinstance(v, (int, float)) and 18 <= v <= 99:
+                out[k] = int(v)
+        elif k in _ENUMS:
+            if v in _ENUMS[k]:
+                out[k] = v
+        elif isinstance(v, str) and v.strip():
+            out[k] = v.strip()[: _LIMITS.get(k, 600)]
+    return out
