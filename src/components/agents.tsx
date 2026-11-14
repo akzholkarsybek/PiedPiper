@@ -24,6 +24,12 @@ import { Portrait } from "./portrait";
 import { PiperMark } from "./brand";
 import { Button } from "./ui/button";
 import { InvestigationModal } from "./discover";
+import {
+  AIModeBadge,
+  invalidateGeminiStatus,
+  liveUnavailable,
+  useGeminiStatus,
+} from "./ai-status";
 import { dispatchDemo, matched, useDemo } from "@/lib/demo-store";
 import { eligibility, recommend } from "@/lib/matching";
 import { attributeLabel, dimensionLabels, type Profile } from "@/lib/profile";
@@ -32,6 +38,7 @@ import {
   buildApprovedContext,
   deterministicSummary,
   investigationBasis,
+  DEFAULT_ROUNDS,
   MAX_ROUNDS,
   other,
   runInvestigation,
@@ -189,6 +196,7 @@ function AgentTheater({
     [actionError, setActionError] = useState("");
   const abortRef = useRef<AbortController | null>(null);
   useEffect(() => () => abortRef.current?.abort(), []);
+  const status = useGeminiStatus();
   const eligible = eligibility(profile, peer).eligible;
   const recommendation = eligible ? recommend(profile, [peer])[0] : undefined;
   const view: Live | null =
@@ -218,7 +226,7 @@ function AgentTheater({
   const running = view?.status === "running";
   const names = { a: profile.name, b: peer.name };
 
-  function start(source: "gemini" | "scripted") {
+  function start(source: "gemini" | "scripted", reuse = true) {
     abortRef.current?.abort();
     const ac = new AbortController();
     abortRef.current = ac;
@@ -261,6 +269,7 @@ function AgentTheater({
       }
     };
     const finish = (s: AgentSession) => {
+      if (s.source === "gemini") invalidateGeminiStatus();
       if (s.status !== "failed")
         try {
           dispatchDemo({ type: "agent-session", id: peer.id, session: s });
@@ -275,6 +284,7 @@ function AgentTheater({
             ...l,
             status: s.status === "failed" ? "error" : "done",
             summary: s.summary,
+            topics: s.topics,
             turns: s.turns,
             facts: s.facts,
             error:
@@ -322,7 +332,6 @@ function AgentTheater({
         source: "scripted",
         ask: async (i, o) => (await wait(900), brain.ask(i, o)),
         answer: async (i, o) => (await wait(1100), brain.answer(i, o)),
-        summarize: brain.summarize,
       };
       runInvestigation({
         a: profile,
@@ -346,6 +355,7 @@ function AgentTheater({
             b: peer,
             handled,
             processingConsent: true,
+            reuse,
           }),
           signal: ac.signal,
         });
@@ -392,9 +402,7 @@ function AgentTheater({
     const i = view.turns.length;
     if (!view.topics.length) return "Planning the most useful questions…";
     if (i >= view.topics.length * 2)
-      return view.source === "gemini"
-        ? "Summarizing what the matchmakers found…"
-        : "Assembling the summary from approved facts…";
+      return "Assembling the summary from verified facts (no extra AI call)…";
     const topic = view.topics[Math.floor(i / 2)];
     return i % 2 === 0
       ? `Piper for ${names[topic.asker]} is preparing a question about ${topic.label.toLowerCase()}…`
@@ -414,8 +422,8 @@ function AgentTheater({
             {running
               ? "In conversation"
               : view
-                ? `${view.turns.filter((t) => t.role === "answer").length} of ${MAX_ROUNDS} rounds`
-                : `Up to ${MAX_ROUNDS} rounds`}
+                ? `${view.turns.filter((t) => t.role === "answer").length} round${view.turns.filter((t) => t.role === "answer").length === 1 ? "" : "s"}`
+                : `${DEFAULT_ROUNDS}–${MAX_ROUNDS} rounds`}
           </span>
         </div>
         <AgentCard name={peer.name} portrait={peer.id} />
@@ -434,8 +442,9 @@ function AgentTheater({
               private.
             </li>
             <li>
-              <Check size={14} /> At most {MAX_ROUNDS} question-and-answer
-              rounds. No scores, no predictions.
+              <Check size={14} /> {DEFAULT_ROUNDS} question-and-answer rounds, a{" "}
+              {MAX_ROUNDS === 3 ? "third" : "further"} only for an important
+              open question. No scores, no predictions.
             </li>
             <li>
               <Check size={14} /> Every confirmed fact is checked against
@@ -458,9 +467,18 @@ function AgentTheater({
             Send these fictional profiles’ approved facts to Gemini for this
             conversation.
           </label>
+          <div className="ai-mode-row">
+            <AIModeBadge mode="live" status={status} />
+          </div>
+          {liveUnavailable(status) && (
+            <p className="muted" role="status">
+              Live AI can’t run right now, so nothing will be sent to Gemini.
+              The scripted demonstration shows the same flow, clearly labeled.
+            </p>
+          )}
           <div className="inline-actions">
             <Button
-              disabled={!consent || !eligible}
+              disabled={!consent || !eligible || liveUnavailable(status)}
               onClick={() => start("gemini")}
             >
               <Sparkles size={16} /> Let our AIs talk
@@ -527,7 +545,7 @@ function AgentTheater({
                   >
                     Play the scripted demonstration instead
                   </Button>
-                  {consent && (
+                  {consent && !liveUnavailable(status) && (
                     <Button
                       size="sm"
                       variant="ghost"
@@ -555,6 +573,7 @@ function AgentTheater({
           peer={peer}
           profile={profile}
           handled={handled}
+          isMatched={isMatched}
           canAsk={!!recommendation}
           onAsk={setAsking}
         />
@@ -607,8 +626,8 @@ function AgentTheater({
           <Button
             size="sm"
             variant="outline"
-            disabled={!consent || !eligible}
-            onClick={() => start("gemini")}
+            disabled={!consent || !eligible || liveUnavailable(status)}
+            onClick={() => start("gemini", false)}
           >
             <Sparkles size={14} /> Live with Gemini
           </Button>
@@ -759,7 +778,13 @@ function TurnBubble({
         PIPER FOR {names[turn.side].toUpperCase()} ·{" "}
         {turn.role === "question" ? "ASKS" : "ANSWERS"} · ROUND {turn.round}
         {topic ? ` · ${topic.label.toUpperCase()}` : ""}
-        <em>{source === "gemini" ? "GEMINI" : "SCRIPTED"}</em>
+        <em>
+          {source === "scripted"
+            ? "SCRIPTED"
+            : turn.answeredBy === "rule"
+              ? "RULE · NO AI CALL"
+              : "GEMINI"}
+        </em>
       </span>
       <p>{turn.text}</p>
       {turn.role === "answer" && (
@@ -776,6 +801,12 @@ function TurnBubble({
         </span>
       )}
       <EvidenceChips ids={turn.evidence} factMap={factMap} names={names} />
+      {turn.answeredBy === "rule" && source === "gemini" && (
+        <small className="grounding-note">
+          <ShieldCheck size={12} /> Nothing approved answers this, so it was
+          answered by rule without asking the AI to guess.
+        </small>
+      )}
       {turn.grounding === "corrected" && (
         <small className="grounding-note">
           <ShieldCheck size={12} /> The AI draft couldn’t be fully verified, so
@@ -793,6 +824,7 @@ function SummaryPanel({
   peer,
   profile,
   handled,
+  isMatched,
   canAsk,
   onAsk,
 }: {
@@ -802,6 +834,7 @@ function SummaryPanel({
   peer: Profile;
   profile: Profile;
   handled: Record<string, string>;
+  isMatched: boolean;
   canAsk: boolean;
   onAsk: (key: string) => void;
 }) {
@@ -811,7 +844,7 @@ function SummaryPanel({
         <span className="eyebrow">
           {summary.source === "gemini"
             ? "GEMINI SUMMARY · EVERY ITEM CITES VERIFIED FACTS"
-            : "SUMMARY ASSEMBLED FROM APPROVED DATA · NO AI"}
+            : "SUMMARY ASSEMBLED FROM VERIFIED FACTS · NO AI CALL"}
         </span>
         <h3>
           {summary.verdict === "clarify-first"
@@ -824,6 +857,42 @@ function SummaryPanel({
           checked by the matching engine, never by AI.
         </small>
       </div>
+      {!!summary.sharedActivities?.length && (
+        <div className="shared-activities">
+          <h4>
+            <CalendarHeart size={15} /> Things you could enjoy together
+          </h4>
+          <ul>
+            {summary.sharedActivities.map((s) => (
+              <li key={s.category}>
+                <span>{s.label}</span>
+                <EvidenceChips
+                  ids={s.evidence.slice(0, 4)}
+                  factMap={factMap}
+                  names={names}
+                />
+                {isMatched ? (
+                  <Link
+                    className="text-link"
+                    href={`/connections?with=${peer.id}&kind=${s.category}#discover`}
+                  >
+                    See real options in Astana <ArrowUpRight size={12} />
+                  </Link>
+                ) : (
+                  <small>
+                    Real places and events unlock after you both say yes.
+                  </small>
+                )}
+              </li>
+            ))}
+          </ul>
+          <small>
+            Activity types from confirmed shared interests only. Real places and
+            events are suggested from verified listings after you both say yes —
+            the matchmakers never invent venues.
+          </small>
+        </div>
+      )}
       <div className="summary-columns">
         <div className="summary-col confirmed">
           <h4>
@@ -979,9 +1048,12 @@ function NextSteps({
         <div className="agent-next-action">
           <Heart size={20} />
           <strong>You’re connected.</strong>
-          <p>Compare general availability and get a few first-date ideas.</p>
+          <p>
+            Compare general availability and discover real places and events for
+            a first date.
+          </p>
           <Button asChild>
-            <Link href={`/connections?with=${peer.id}`}>
+            <Link href={`/connections?with=${peer.id}#discover`}>
               <CalendarHeart size={16} /> Plan your first date
             </Link>
           </Button>

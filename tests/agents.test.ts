@@ -6,15 +6,16 @@ import {
   ASKER_INSTRUCTION,
   AgentError,
   buildApprovedContext,
+  DEFAULT_ROUNDS,
   deterministicSummary,
   geminiBrain,
+  MAX_MODEL_CALLS,
   MAX_MODEL_REQUESTS,
   MAX_ROUNDS,
   planInvestigation,
   runInvestigation,
   scriptedBrain,
   sessionSchema,
-  SUMMARY_INSTRUCTION,
   verifyAnswer,
   type AgentBrain,
   type AgentEvent,
@@ -38,13 +39,17 @@ function fakeGemini(
     input: Record<string, unknown>,
     n: number,
   ) => unknown,
+  /** HTTP requests each call "sends" (2 = one retry happened). */
+  requestsPerCall = 1,
 ) {
   const calls: Call[] = [];
   const generate: JSONGenerator = async <T>(
     schema: z.ZodType<T>,
     system: string,
     input: unknown,
+    options?: { onRequest?: (m: string) => void },
   ) => {
+    for (let i = 0; i < requestsPerCall; i++) options?.onRequest?.("fake");
     calls.push({ system, input });
     const raw = respond(system, input as Record<string, unknown>, calls.length);
     if (raw instanceof Error) throw raw;
@@ -77,27 +82,18 @@ const politeModel = (system: string, input: Record<string, unknown>) => {
         }
       : { answer: "Not shared.", status: "unknown", evidence: [] };
   }
-  return {
-    commonGround: [
-      {
-        text: "You both enjoy hiking.",
-        evidence: ["a.interest.hiking", "b.interest.hiking"],
-      },
-      { text: "Invented claim.", evidence: ["b.secret.salary"] },
-      { text: "One-sided claim.", evidence: ["a.interest.hiking"] },
-    ],
-    possibleDifferences: [],
-    explanation: {
-      text: "Grounded explanation.",
-      evidence: ["a.intent", "b.intent"],
-    },
-  };
+  throw new Error("Unexpected system instruction: no summary call exists.");
 };
+/** Lena with a second unknown that matters to Jamie (pace), so a third round is relevant. */
+const lenaTwoUnknowns = (): Profile => ({
+  ...lena(),
+  attributes: { ...lena().attributes, pace: null },
+});
 
 describe("Agent planning and bounds", () => {
-  it("plans at most three rounds, the hard unknown first, then a reciprocal question", () => {
+  it("plans two rounds by default: the hard unknown first, then a reciprocal question", () => {
     const topics = planInvestigation(jamie(), lena());
-    expect(topics.length).toBeLessThanOrEqual(MAX_ROUNDS);
+    expect(topics).toHaveLength(DEFAULT_ROUNDS);
     expect(topics[0]).toMatchObject({
       asker: "a",
       kind: "dimension",
@@ -129,7 +125,40 @@ describe("Agent planning and bounds", () => {
     expect(sessionSchema.safeParse(s).success).toBe(true);
     expect(events.at(-1)?.type).toBe("complete");
   });
-  it("caps rate-limit retries instead of looping", async () => {
+  it("plans a third round only for a relevant open uncertainty", () => {
+    const topics = planInvestigation(jamie(), lenaTwoUnknowns());
+    expect(topics).toHaveLength(MAX_ROUNDS);
+    expect(topics[2]).toMatchObject({ kind: "dimension", dimension: "pace" });
+    expect(topics[2].questionKey).not.toBeNull();
+  });
+  it("runs the third round when healthy, within the call limit", async () => {
+    const { generate, calls } = fakeGemini(politeModel);
+    const s = await runInvestigation({
+      a: jamie(),
+      b: lenaTwoUnknowns(),
+      brain: geminiBrain(generate),
+    });
+    expect(s.turns.filter((t) => t.role === "answer")).toHaveLength(3);
+    expect(calls.length).toBeLessThanOrEqual(MAX_MODEL_CALLS);
+    // Both unshared dimensions were answered by rule: no model guessed them.
+    expect(calls.length).toBe(4);
+    expect(s.notice ?? "").not.toMatch(/third round was skipped/);
+  });
+  it("skips the optional third round when retries were needed (quota is tight)", async () => {
+    const { generate, calls } = fakeGemini(politeModel, 2);
+    const s = await runInvestigation({
+      a: jamie(),
+      b: lenaTwoUnknowns(),
+      brain: geminiBrain(generate),
+    });
+    expect(s.status).toBe("complete");
+    expect(s.turns.filter((t) => t.role === "answer")).toHaveLength(2);
+    expect(s.topics).toHaveLength(2);
+    expect(s.notice).toMatch(/third round was skipped/);
+    expect(s.modelCalls).toBe(calls.length * 2); // HTTP requests incl. retries
+    expect(s.modelCalls).toBeLessThanOrEqual(MAX_MODEL_REQUESTS);
+  });
+  it("stops at the first unrecoverable error instead of looping (retries live in generateJSON)", async () => {
     const { generate, calls } = fakeGemini(
       () =>
         new AIError("RATE_LIMITED", "Gemini quota or rate limit reached.", 429),
@@ -138,11 +167,42 @@ describe("Agent planning and bounds", () => {
       a: jamie(),
       b: lena(),
       brain: geminiBrain(generate),
-      retryWaitMs: 1,
     });
-    expect(calls.length).toBe(3); // one attempt + two bounded retries
+    expect(calls.length).toBe(1);
     expect(s.status).toBe("failed");
     expect(s.turns).toEqual([]);
+  });
+  it("answers by rule, without a model call, when no approved fact can answer", async () => {
+    const { generate, calls } = fakeGemini(politeModel);
+    const s = await runInvestigation({
+      a: jamie(),
+      b: lena(),
+      brain: geminiBrain(generate),
+    });
+    const first = s.turns.find((t) => t.id === "r1a")!;
+    expect(first).toMatchObject({ status: "unknown", answeredBy: "rule" });
+    // Round 1: question only. Round 2: question + answer. No summary call.
+    expect(calls.map((c) => c.system)).toEqual([
+      ASKER_INSTRUCTION,
+      ASKER_INSTRUCTION,
+      ANSWER_INSTRUCTION,
+    ]);
+  });
+  it("sends each agent only the facts relevant to the topic and no transcript", async () => {
+    const { generate, calls } = fakeGemini(politeModel);
+    await runInvestigation({
+      a: jamie(),
+      b: lena(),
+      brain: geminiBrain(generate),
+    });
+    const answer = calls.find((c) => c.system === ANSWER_INSTRUCTION)!;
+    const facts = (
+      answer.input as { yourPrincipal: { facts: { id: string }[] } }
+    ).yourPrincipal.facts;
+    expect(facts.length).toBeGreaterThan(0);
+    expect(facts.every((f) => f.id.startsWith("a.interest."))).toBe(true);
+    for (const c of calls)
+      expect(JSON.stringify(c.input)).not.toMatch(/"conversation"/);
   });
   it("refuses to investigate a pair with a confirmed hard incompatibility", async () => {
     const smoker = {
@@ -203,11 +263,7 @@ describe("Agent context separation and disclosure policy", () => {
       brain: geminiBrain(generate),
     });
     for (const c of calls) {
-      expect([
-        ASKER_INSTRUCTION,
-        ANSWER_INSTRUCTION,
-        SUMMARY_INSTRUCTION,
-      ]).toContain(c.system);
+      expect([ASKER_INSTRUCTION, ANSWER_INSTRUCTION]).toContain(c.system);
       expect(c.system).not.toContain("IGNORE ALL PREVIOUS");
       expect(c.system).not.toContain("Lena");
     }
@@ -233,10 +289,10 @@ describe("Grounding verification", () => {
     label: "How they like to spend time",
     questionKey: null,
   };
-  it("turns a fabricated answer about an unshared dimension into an explicit unknown (prompt injection)", async () => {
+  it("never lets a model answer about an unshared dimension, even under prompt injection", async () => {
     const injected = { ...lena(), bio: INJECTION };
     // A compromised model that obeys the injected bio.
-    const { generate } = fakeGemini((system) =>
+    const { generate, calls } = fakeGemini((system) =>
       system === ASKER_INSTRUCTION
         ? {
             question: "Family plans?",
@@ -264,8 +320,16 @@ describe("Grounding verification", () => {
       (t) => t.role === "answer" && t.topicId === "a:dimension:children",
     )!;
     expect(first.status).toBe("unknown");
-    expect(first.grounding).toBe("corrected");
+    expect(first.answeredBy).toBe("rule");
     expect(first.evidence).toEqual([]);
+    // The compromised answer model was never even asked about family plans.
+    expect(
+      calls.some(
+        (c) =>
+          c.system === ANSWER_INSTRUCTION &&
+          (c.input as { topic: { kind: string } }).topic.kind === "dimension",
+      ),
+    ).toBe(false);
     expect(first.text).not.toMatch(/three children|dealbreaker/i);
     // The asker may only cite its own facts; foreign ids are stripped.
     expect(s.turns[0].evidence).toEqual([]);
@@ -323,19 +387,44 @@ describe("Grounding verification", () => {
       grounding: "corrected",
     });
   });
-  it("drops summary items with unknown ids or one-sided common ground, and never scores", async () => {
+  it("assembles the summary from verified facts without a model call, and never scores", async () => {
     const { generate } = fakeGemini(politeModel);
     const s = await runInvestigation({
       a: jamie(),
       b: lena(),
       brain: geminiBrain(generate),
     });
-    expect(s.summary?.source).toBe("gemini");
-    expect(s.summary?.commonGround.map((c) => c.text)).toEqual([
-      "You both enjoy hiking.",
-    ]);
+    expect(s.summary?.source).toBe("deterministic");
+    expect(s.summary?.commonGround.map((c) => c.text)).toContain(
+      "You both enjoy hiking, music, coffee and art.",
+    );
     expect(JSON.stringify(s.summary)).not.toMatch(
       /score|percent|probability|%/i,
+    );
+  });
+});
+
+describe("Shared activities", () => {
+  it("derives shared activities from confirmed shared interests only, without inventing venues", () => {
+    const summary = deterministicSummary(jamie(), lena());
+    const kinds = summary.sharedActivities.map((a) => a.category).sort();
+    expect(kinds).toEqual([
+      "concerts-events",
+      "culture-activities",
+      "food-coffee",
+      "parks-outdoors",
+    ]);
+    const facts = new Set([
+      ...buildApprovedContext(jamie(), "a").facts.map((f) => f.id),
+      ...buildApprovedContext(lena(), "b").facts.map((f) => f.id),
+    ]);
+    for (const a of summary.sharedActivities) {
+      expect(a.evidence.every((id) => facts.has(id))).toBe(true);
+      expect(a.evidence.some((id) => id.startsWith("a."))).toBe(true);
+      expect(a.evidence.some((id) => id.startsWith("b."))).toBe(true);
+    }
+    expect(JSON.stringify(summary.sharedActivities)).not.toMatch(
+      /ticketon|concert hall|street|avenue|₸/i,
     );
   });
 });
@@ -382,7 +471,7 @@ describe("Unknowns, failures, and the scripted demonstration", () => {
   });
   it("keeps completed rounds and labels a partial result when the API fails mid-way", async () => {
     const { generate } = fakeGemini((system, input, n) =>
-      n >= 4
+      n >= 3
         ? new AIError(
             "NETWORK_ERROR",
             "Gemini could not be reached in time.",
@@ -396,9 +485,9 @@ describe("Unknowns, failures, and the scripted demonstration", () => {
       brain: geminiBrain(generate),
     });
     expect(s.status).toBe("partial");
-    expect(s.turns).toHaveLength(2); // the dangling third question is dropped
+    expect(s.turns).toHaveLength(2); // the dangling question is dropped
     expect(s.summary?.source).toBe("deterministic");
-    expect(s.notice).toMatch(/assembled without AI/);
+    expect(s.notice).toMatch(/completed rounds are kept/);
   });
   it("hides raw provider errors behind a generic message", async () => {
     const brain: AgentBrain = {
@@ -419,7 +508,7 @@ describe("Unknowns, failures, and the scripted demonstration", () => {
     });
     expect(s.source).toBe("scripted");
     expect(s.modelCalls).toBe(0);
-    expect(s.turns).toHaveLength(6);
+    expect(s.turns).toHaveLength(DEFAULT_ROUNDS * 2);
     expect(s.summary?.source).toBe("deterministic");
     expect(s.turns.find((t) => t.role === "answer")!.status).toBe("unknown");
   });

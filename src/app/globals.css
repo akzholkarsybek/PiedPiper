@@ -4586,3 +4586,466 @@ legend {
   font-size: 9px;
   line-height: 1.5;
 }
+
+/* ---------- Phase 2.2: AI mode badges, date discovery, diagnostics ---------- */
+.ai-mode-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0;
+}
+.ai-mode {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  border-radius: 999px;
+  padding: 4px 10px;
+  border: 1px solid transparent;
+}
+.ai-mode.live {
+  background: #fbf1ea;
+  color: #a2432f;
+  border-color: #efd3c6;
+}
+.ai-mode.scripted {
+  background: #eef2e7;
+  color: #56704c;
+  border-color: #d7e0cc;
+}
+.ai-mode.unavailable {
+  background: #f4f4ec;
+  color: #6f746e;
+  border-color: #d8dccb;
+}
+.shared-activities {
+  margin: 0 0 14px;
+  padding: 14px 16px;
+  border: 1px solid #e0e6d6;
+  border-radius: 12px;
+  background: #f6f8f1;
+}
+.shared-activities h4 {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 0 0 6px;
+  font-size: 13px;
+}
+.shared-activities ul {
+  list-style: none;
+  margin: 0 0 6px;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+}
+.shared-activities small {
+  font-size: 10.5px;
+  color: #6f746e;
+}
+.discover-date {
+  margin-top: 18px;
+  border: 1px solid #e2e4d9;
+  border-radius: 14px;
+  padding: 22px;
+  background: linear-gradient(180deg, #fffaf4 0%, #fcfcf7 100%);
+  scroll-margin-top: 90px;
+}
+.discover-date-head h2 {
+  font-size: 28px;
+  margin: 8px 0 6px;
+}
+.discover-date-head p {
+  font-size: 12px;
+  color: #7a8072;
+  max-width: 640px;
+  margin: 0;
+}
+.kind-tiles {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 16px 0 12px;
+}
+.kind-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 10px;
+  border: 1px solid #e2e4d9;
+  border-radius: 12px;
+  background: #fffefa;
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 12.5px;
+  transition:
+    border-color 0.15s,
+    background 0.15s,
+    transform 0.15s;
+}
+.kind-tile svg {
+  color: #b94e3d;
+}
+.kind-tile:hover {
+  transform: translateY(-1px);
+  border-color: #d9b9a9;
+}
+.kind-tile.on {
+  border-color: #b94e3d;
+  background: #fbf1ea;
+  box-shadow: 0 0 0 1px #b94e3d inset;
+}
+.discover-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  align-items: flex-end;
+  font-size: 11px;
+  color: #5f665a;
+}
+.discover-filters label:not(.check-label) {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 150px;
+}
+.discover-filters select {
+  border: 1px solid #dfe3d5;
+  border-radius: 8px;
+  background: #fffefa;
+  padding: 7px 9px;
+  font-size: 12px;
+}
+.discover-context {
+  margin: 10px 0 4px;
+}
+.venue-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 12px 0;
+}
+.venue-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border: 1px solid #e2e4d9;
+  border-radius: 12px;
+  background: #fffefa;
+  padding: 14px;
+  min-width: 0;
+}
+.venue-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.venue-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #fbf1ea;
+  color: #b94e3d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.venue-card.kind-parks-outdoors .venue-icon {
+  background: #eef2e7;
+  color: #56704c;
+}
+.venue-meta {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #8a917c;
+  flex: 1;
+  min-width: 0;
+}
+.venue-badge {
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  border-radius: 999px;
+  padding: 2px 7px;
+  background: #eef2e7;
+  color: #56704c;
+  white-space: nowrap;
+}
+.venue-badge.live {
+  background: #f4f0fb;
+  color: #5b4b8a;
+}
+.venue-card h3 {
+  font-family: Georgia, serif;
+  font-weight: 400;
+  font-size: 17px;
+  line-height: 1.25;
+  margin: 2px 0 0;
+}
+.venue-local {
+  font-size: 10.5px;
+  color: #8a917c;
+}
+.venue-facts {
+  list-style: none;
+  padding: 0;
+  margin: 4px 0;
+  display: grid;
+  gap: 4px;
+  font-size: 11.5px;
+  color: #4f564a;
+}
+.venue-facts li {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+}
+.venue-facts svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+  color: #8a917c;
+}
+.venue-why {
+  font-size: 12px;
+  margin: 2px 0;
+}
+.why-source {
+  font-style: normal;
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  color: #a2432f;
+  margin-right: 4px;
+}
+.venue-note,
+.venue-source {
+  font-size: 10px;
+  color: #7a8072;
+}
+.venue-source a,
+.proposal-venue a,
+.data-sources a {
+  color: #a2432f;
+}
+.venue-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 6px;
+}
+.discover-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: space-between;
+  align-items: center;
+}
+.discover-ai {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  font-size: 11px;
+}
+.discover-empty {
+  text-align: center;
+  border: 1px dashed #d8dccb;
+  border-radius: 12px;
+  background: #f8f8f1;
+  padding: 22px;
+  margin: 12px 0;
+  color: #5f665a;
+}
+.discover-empty h3 {
+  font-size: 15px;
+  margin: 8px 0 4px;
+}
+.discover-empty p {
+  font-size: 12px;
+}
+.discover-empty .inline-actions {
+  justify-content: center;
+}
+.data-sources {
+  margin-top: 12px;
+}
+.stale-data {
+  color: #a2432f;
+}
+.proposal-venue {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  align-items: center;
+  font-size: 10.5px;
+  color: #6f746e;
+}
+.diagnostics {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 32px 20px 60px;
+}
+.diagnostics header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+}
+.diagnostics h1 {
+  font-family: Georgia, serif;
+  font-weight: 400;
+  font-size: 34px;
+  margin: 0;
+}
+.diag-grid {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 6px 14px;
+  font-size: 13px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  background: #fffefa;
+}
+.diag-grid dt {
+  color: #6f746e;
+}
+.diag-grid dd {
+  margin: 0;
+  font-weight: 700;
+}
+.diag-models {
+  width: 100%;
+  margin: 14px 0;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.diag-models th,
+.diag-models td {
+  text-align: left;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+}
+.diag-result {
+  font-size: 13px;
+  margin-top: 10px;
+}
+.instagram-field {
+  display: grid;
+  gap: 6px;
+}
+.instagram-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.instagram-row input {
+  flex: 1;
+}
+.instagram-link {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  font-size: 11px;
+  color: #a2432f;
+}
+.photo-picker {
+  display: grid;
+  gap: 8px;
+}
+.photo-thumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.photo-thumbs figure {
+  position: relative;
+  margin: 0;
+  width: 92px;
+}
+.photo-thumbs img {
+  width: 92px;
+  height: 92px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+.photo-thumbs figcaption {
+  font-size: 9.5px;
+  color: #6f746e;
+}
+.info-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 10px;
+}
+.info-legend span {
+  border-radius: 999px;
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+}
+.info-legend .confirmed {
+  background: #eef2e7;
+}
+.info-legend .suggested {
+  background: #fbf1ea;
+}
+.info-legend .unknown {
+  background: #f4f4ec;
+}
+.info-legend .private {
+  background: #f1eef6;
+}
+@media (max-width: 950px) {
+  .venue-list {
+    grid-template-columns: 1fr;
+  }
+  .kind-tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 720px) {
+  .discover-date {
+    padding: 16px 12px;
+  }
+  .discover-filters label:not(.check-label) {
+    min-width: calc(50% - 8px);
+  }
+  .diag-grid {
+    grid-template-columns: 1fr;
+  }
+}
+/* The decorative hero rings may extend past narrow desktop widths; clip them
+   horizontally so the page never scrolls sideways. */
+.hero {
+  overflow-x: clip;
+}
+.instagram-section {
+  display: block;
+}
+.instagram-section h3 {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.instagram-section h3 small {
+  font-weight: 400;
+  color: #8a917c;
+}
+.instagram-row input {
+  border: 1px solid #dfe3d5;
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: #fffefa;
+  max-width: 320px;
+}

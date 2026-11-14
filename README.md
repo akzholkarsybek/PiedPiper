@@ -10,6 +10,15 @@ A conversation-first dating application for intentional adults, designed around 
 
 Each person has a personal AI matchmaker. For a promising, already-eligible introduction, the two matchmakers hold a short, bounded, sequential Gemini conversation using only approved profile facts, verify every factual claim against those facts, and surface what is confirmed, what differs, and what is still unknown. After a mutual yes, the matchmakers compare consented general availability and suggest first-date activity types. People make every decision.
 
+**Phase 2.2** makes it reliable and real-world:
+
+> AI finds compatible people, investigates shared interests, and helps them choose **real places and events** for meaningful dates.
+
+- **Gemini reliability:** `gemini-3.5-flash-lite` (verified for this project) is the preferred model; every failure is classified (auth, 404, short rate limit, daily quota, 5xx, 504, network), retried with bounded backoff only when that can help, cooled down server-side, and shown honestly as _Live Gemini_, _Scripted demonstration_ or _Temporarily unavailable_. A live investigation now costs about **3 requests** instead of up to 9.
+- **Discover Your First Date:** verified cafés, restaurants, parks, museums (OpenStreetMap) and upcoming concerts/events (manually verified Ticketon listings) in **Astana** (default) and **Almaty**, ranked deterministically by shared interests, preferences, budget and mutual availability, with "Suggest this date" proposals that stay pending until both accept.
+- **Let Piper Understand Your Interests:** paste your own bio, captions, music and hobbies (and, where the operator enables it, your own photos) for pending, approve-each suggestions; an optional, unverified, private-by-default Instagram username with no scraping.
+- **Shared activities from the agents** lead straight to verified options, only after both people say yes.
+
 This is a working hackathon application, not a scientifically validated compatibility predictor or a launch-ready public dating service.
 
 ## Quick start
@@ -46,10 +55,13 @@ npm start
 | Safety                       | Adult self-attestation, profile approval, local deletion, blocking, reporting, privacy disclosures                                                          |
 | Real account path            | Supabase registration/login/logout, approved profiles, real decisions, questions, matches, human messages, blocks, reports, deletion APIs and RLS migration |
 | Deployment                   | Next.js production build, Vercel configuration, CI workflow                                                                                                 |
-| **AI Matchmakers** (P0)      | Two Gemini agents with separate contexts, ≤3 sequential Q&A rounds, ID-verified evidence, explicit unknowns, streamed live to an "Agent Conversations" view |
+| **AI Matchmakers** (P0)      | Two Gemini agents with separate contexts, 2 sequential Q&A rounds (a 3rd only for a relevant open question), ID-verified evidence, rule-based "unknown" answers without a model call, deterministic summary, reuse of recent results |
+| **Gemini reliability** (2.2) | Configurable preferred + fallback model, per-category error handling, bounded exponential backoff honoring retry delays, server-side cooldowns, no retry storms, `/diagnostics` page |
 | **Mutual availability** (P0) | Weekly editor, IANA time zones, deterministic UTC-interval overlap, explicit sharing consent, editable/clearable, never inferred                            |
-| **First-date planning** (P0) | After mutual interest only: 2–3 grounded activity types (no invented venues/prices/hours), proposals that are not confirmed until both accept               |
-| **Profile enrichment** (P1)  | "Help Piper Get to Know Me": user-written text → pending suggestions quoted from the user's own words; approve or reject each; no sensitive inference       |
+| **Discover Your First Date** (2.2) | Real places (OpenStreetMap) and upcoming events (manually verified Ticketon pages) for Astana/Almaty; city, category, budget, time, indoor/outdoor and shared-interest filters; deterministic ranking; optional verified Gemini explanations |
+| **First-date planning** (P0) | After mutual interest only: activity-type ideas plus real venue/event proposals that are not confirmed until both accept; nothing is booked or purchased |
+| **Profile enrichment** (P1)  | "Let Piper Understand Your Interests": your own text (and, if enabled, your own photos) → pending suggestions; confirmed / suggested / unknown / private labels; delete everything you pasted |
+| **Instagram** (2.2, P1)      | Optional username: syntax check only, private by default, visibility toggle, removable; never fetched, scraped or sent to agents |
 | **Ready to Connect** (P1)    | Pause/resume new introductions in both directions; existing matches and messages preserved; enforced in JS and SQL                                          |
 
 **Configuration limits:** Supabase and Vercel credentials were not present. The real-account code and SQL authorization were tested locally, but hosted Supabase sign-up/email/persistence were not verified. No Vercel deployment URL has been created or verified. Real profiles are entered manually; the guest UI does not send real dating interviews to Gemini.
@@ -64,17 +76,17 @@ Everything below works without signing in and without Supabase. Every simulated 
 4. **Jamie reviews and approves** the profile (edit anything, then approve).
 5. **The reciprocal engine recommends Lena** on **Discover**.
 6. On Lena's card choose **Let our AIs talk**.
-7. Tick the Gemini consent and choose **Let our AIs talk** to watch two live Gemini matchmakers, or **Play the scripted demonstration** (template-based, clearly labeled, no AI). Both run the same orchestration and verification code. The agents find common ground (hiking, cooking, art, reading; kindness, curiosity, family; long-term) and an **important unknown**: Lena has not shared family plans, a firm requirement for Jamie.
+7. Tick the Gemini consent and choose **Let our AIs talk** to watch two live Gemini matchmakers, or **Play the scripted demonstration** (template-based, clearly labeled, no AI). Both run the same orchestration and verification code. The agents find common ground (hiking, music, coffee, art; kindness, curiosity, family; long-term), **things you could enjoy together** (Parks & Outdoors, Concerts & Events, Food & Coffee, Culture & Activities), and an **important unknown**: Lena has not shared family plans, a firm requirement for Jamie. That question is answered _by rule_ ("not shared yet") without asking the AI to guess.
 8. In **Still unknown**, choose **Ask Lena with consent**. This is the existing Phase 1 consent workflow: choose a fictional answer and explicitly simulate Lena's approval (or decline).
 9. **The recommendation updates** from approved information only ("Resolved with consent"; the introduction is recalculated; a conflicting answer removes it, which no AI can override).
 10. Choose **I'm interested in Lena**.
 11. Choose **Lena is also interested** (explicitly simulated).
 12. **A mutual connection is created**; choose **Plan your first date**.
 13. In **When could you meet?** choose **Add my general availability → Use Jamie's fictional sample**, tick **Share my general availability with mutual connections**, and save. Overlapping windows appear (Lena's sharing consent is part of the fictional data).
-14. In **First-date ideas** tick the Gemini consent and **Ask our matchmakers for ideas**, or **Use template ideas (no AI)**.
-15. Pick a time and an idea, then **Propose this plan to Lena**. It shows _Proposed · not confirmed until both accept_ until you simulate **Lena accepts**. Nothing is booked.
+14. In **Discover your first date** (Astana is the default city) choose **Concerts & Events**. Verified upcoming events that fit both people's availability appear — for example _«The Music of Hans Zimmer»_ at QAZAQCONCERT, Sunday 19:00 — with venue, time, listed price, why it suits you both, the data source and the official **Ticketon page** / **Open location** links. Optionally tick the consent and **Explain with Gemini** (one verified call), or **Explore alternatives**.
+15. Choose **Suggest this date**. The proposal shows _Proposed · not confirmed until both accept_ until you simulate **Lena accepts** (labeled simulated). Nothing is booked or purchased; tickets are bought by the people themselves on Ticketon. The older **First-date ideas** card (activity types; Gemini or labeled templates) still works too.
 
-Also try **My AI Matchmaker** (journey tracker, Ready-to-Connect pause, availability editor, "Help Piper Get to Know Me"), other introductions (Maya has no overlap; Sophie has not shared; Jules has not entered availability; Nora is not open to meeting soon), and **Stop sharing my availability** (open proposals are withdrawn).
+Also try switching the city to **Almaty**, the **Parks & Outdoors** and **Food & Coffee** tiles, **My AI Matchmaker** (journey tracker, Ready-to-Connect pause, availability editor, "Let Piper Understand Your Interests" with **Use Jamie's fictional sample**), the **Instagram** card on **My Profile**, **/diagnostics**, other introductions (Maya has no overlap; Sophie has not shared; Jules has not entered availability; Nora is not open to meeting soon), and **Stop sharing my availability** (open proposals are withdrawn).
 
 ### Phase 1 walkthrough (still supported)
 
@@ -95,8 +107,11 @@ Guest storage is isolated under `pied-piper:fictional-demo:v2`. Saved Phase 1 (`
 | Variable                               | Required                | Purpose                                                                                          |
 | -------------------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------ |
 | `GEMINI_API_KEY`                       | For live AI             | Server-only Google API credential                                                                |
-| `GEMINI_MODEL`                         | For live AI             | First-choice model for all Gemini calls                                                          |
-| `GEMINI_FALLBACK_MODEL`                | Optional                | Used after a 404, a 5xx, or a timeout from `GEMINI_MODEL`; defaults to `gemini-3.5-flash`        |
+| `GEMINI_MODEL`                         | For live AI             | Preferred model for all Gemini calls; recommended `gemini-3.5-flash-lite`                        |
+| `GEMINI_FALLBACK_MODEL`                | Optional                | Tried only for model-specific failures (404, 5xx/timeout after retries, per-model quota) and only when not cooling down; defaults to `gemini-3.5-flash` (or `gemini-3.5-flash-lite` when `GEMINI_MODEL` is another model); `none` disables it |
+| `ALLOW_PHOTO_ANALYSIS`                 | Optional, default false | Enables photo suggestions. Leave off on free-tier keys; enable only with a provider configuration suitable for personal images |
+| `PLACES_OSM_LIVE`                      | Optional, default false | Enables the optional live OpenStreetMap (Overpass) places endpoint `/api/places` (cached 24 h)   |
+| `OVERPASS_URL`                         | Optional                | Overpass endpoint for the live provider                                                          |
 | `NEXT_PUBLIC_SUPABASE_URL`             | For real accounts       | Supabase project URL                                                                             |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | For real accounts       | Public/publishable key, protected by database RLS                                                |
 | `ALLOW_REAL_AI_PROCESSING`             | Optional, default false | Explicit operator gate for real-data API requests; manual account profiles remain the UI default |
@@ -107,9 +122,30 @@ Never put Gemini credentials in a `NEXT_PUBLIC_` variable. No service-role Supab
 
 The official `@google/genai` SDK runs only in server code. Model output uses JSON Schema and is validated with Zod. `/api/ai/onboard` produces a draft, not an approved profile. Unknown facts stay blank/null. Users must review and approve every shared profile. AI extraction can still be mistaken; review is essential.
 
-The application preserves `.env.local` and tries the configured model first. During Phase 2 verification the configured model consistently returned **504** (upstream timeout) after ~38 s, while the fallback model answered. The fallback therefore now covers 404, 5xx, and timeouts (the configured model gets at most 25 s), and a 5-minute circuit breaker sends later calls straight to the fallback. Every fallback use is disclosed via `providerNotice` in the UI. To avoid the initial slow attempt, set `GEMINI_MODEL` to a model that is responsive for your account (for example the fallback model).
+#### Model selection (Phase 2.2)
 
-Missing credentials, invalid credentials, inaccessible models, quota/rate limits, network timeouts, malformed JSON, and invalid schema output produce explicit errors. They never masquerade as successful AI calls. The user can choose a predefined demonstration.
+Root cause of the Phase 2 failures, measured on 2026-11-14 with the SDK (`models.get` plus a minimal JSON request): `gemini-3.8-flash` hung until the 30 s client timeout (the 504s users saw), and the old fallback `gemini-3.5-flash` returned **429** with `QuotaFailure: GenerateRequestsPerDayPerProjectPerModel-FreeTier` (20 requests/day) and a ~17 h `RetryInfo` delay. That is the "Gemini quota or rate limit reached" message. `gemini-3.5-flash-lite` was available to the project and answered in ~1 s.
+
+The local `.env.local` therefore now sets only `GEMINI_MODEL=gemini-3.5-flash-lite` (the key was not touched). The model stays configurable; nothing hard-codes it.
+
+#### Error handling and quota recovery (`src/lib/gemini.ts`, `src/lib/gemini-health.ts`)
+
+| Failure | Detected by | What happens |
+| --- | --- | --- |
+| 401/403 (or 400 "API key") | HTTP status | No retry, no model switch; project cools down 10 min; "check credentials" message |
+| 404 | HTTP status | Model marked unavailable for 1 h; fallback tried once |
+| 429 short rate limit | `QuotaFailure` per-minute / short `RetryInfo` | Up to 2 retries with exponential backoff + jitter, honoring `RetryInfo` if ≤ 10 s; longer delays are not waited out: the model cools down and the fallback is tried |
+| 429 daily quota | `…PerDay…` quota id, "daily", or delay > 15 min | **No retries.** Cools down until the provider's reset time. If the quota is per-model, the fallback is tried once; if project-wide, everything stops and later calls fail fast without a request |
+| 500/503 | HTTP status | Bounded backoff (≤ 2 retries), then 3-minute circuit breaker and fallback |
+| 504 / client timeout | Status or `AbortError` | One retry, then circuit breaker and fallback |
+| Network failure | `fetch failed`, `ECONN…` | One retry; short project cooldown |
+| Malformed JSON / schema | Parse/Zod | No retry, no cooldown (not an outage) |
+
+Each call has a request cap (`maxRequests`) and respects an orchestration deadline, so there are no retry storms. Cooldowns are short-lived, in server memory, and contain only model names, categories and timestamps — never keys, prompts, provider messages or profile data. Users only see category-specific, user-safe messages.
+
+#### Live, scripted, or unavailable — always explicit
+
+`GET /api/ai/status` (no Gemini request) reports the selected/fallback model, availability (`available`, `degraded` = fallback in use, `unavailable`, `unknown`, `not-configured`), the last error category, cooldowns, and whether scripted mode is recommended. The UI shows a **Live Gemini**, **Scripted demonstration · no AI**, or **Live Gemini temporarily unavailable · retry in about N h** badge, and disables live buttons while unavailable. The developer page **`/diagnostics`** shows the same non-sensitive data plus a throttled (once per minute) **Run one minimal live request** button.
 
 Grounded explanations are especially constrained: Gemini selects indices from the deterministic engine’s evidence list; the server returns the original facts. It cannot invent a new explanation claim. Question generation sends only the relevant dimension, not private interview transcripts or the other person’s preference.
 
@@ -121,6 +157,14 @@ npm run test:api
 
 The smoke scripts use fictional inputs and do not print credentials or configured model values. The API smoke covers all three live AI routes and rejection of an invalid/unconsented request. Provider calls may consume API quota.
 
+#### Live verification on 2026-11-14 (`gemini-3.5-flash-lite`, no fallback used)
+
+- Structured JSON extraction (onboarding), relevant opt-in question generation, grounded explanation, invalid-request rejection: **PASS** (`npm run test:api`).
+- Bounded agent conversation: complete, 2 rounds, **3 HTTP requests**, 2.6 s; round 1 "family plans" answered by rule (unknown), round 2 confirmed with 5 verified fact IDs; summary deterministic. A repeat request was served from the reuse cache in 21 ms with **0** new requests.
+- Venue explanations: 3 of 3 verified (each cited shared interests/preferences), 0 rejected.
+- Text enrichment: 12 pending suggestions, each quoting the user's own words.
+- Diagnostics live check: PASS. Photo analysis was **not** live-tested (disabled by design on the free tier).
+
 ## AI matchmakers: agent-to-agent investigation
 
 Implementation: `src/lib/agents.ts` (pure, isomorphic, unit-tested), streamed by `src/app/api/ai/agents/route.ts`, shown by `src/components/agents.tsx`.
@@ -129,26 +173,52 @@ Pipeline (deterministic filtering is never replaced):
 
 1. **Hard eligibility** (`eligibility`) and **ranking** (`recommend`) run first. The orchestrator refuses an ineligible pair, and the route validates fictional + approved + eligible + consent before streaming.
 2. **Approved, shareable contexts** (`buildApprovedContext`): age, general city, intention, interests, values, _known_ lifestyle attributes, and the person's own bio, each with a stable ID such as `b.interest.hiking` or `a.attr.children`. Partner preferences, dealbreakers, blocks, interview transcripts, availability, and pending AI suggestions are **never** included.
-3. **Deterministic planning** (`planInvestigation`): the most important uncertainty for Jamie first (unknown hard preferences, then soft ones), then a **reciprocal** question from Lena's agent, then the next topic. At most **3 rounds**; declined questions are never re-asked.
-4. **Actual sequential exchanges**: for each round, the asking agent's Gemini call receives only its own principal's facts, the topic, and the conversation so far, and produces one question. A **separate** Gemini call for the answering agent receives only _its_ principal's facts and the question, and returns `{answer, status: confirmed|unknown, evidence: [fact IDs]}`. This is not one prompt fabricating a transcript.
+3. **Deterministic planning** (`planInvestigation`): the most important uncertainty for Jamie first (unknown hard preferences, then soft ones), then a **reciprocal** question from Lena's agent. **Two rounds by default.** A third is planned only when it targets a relevant open uncertainty (an unanswered or firm-requirement dimension), and it runs only if no retries were needed so far and time/request budget remains; otherwise it is skipped with a notice. Declined questions are never re-asked.
+4. **Actual sequential exchanges**: for each round, the asking agent's Gemini call receives only **its own principal's facts relevant to the topic**, the topic, and the earlier questions (no transcript), and produces one question. A **separate** Gemini call for the answering agent receives only _its_ principal's facts for that topic and the question, and returns `{answer, status: confirmed|unknown, evidence: [fact IDs]}`. When the answerer has **no approved fact** that could answer (e.g. unshared family plans), the answer is produced **by rule** as an explicit unknown and no model call is made: a model could only guess. This is not one prompt fabricating a transcript.
 5. **Verification before display** (`verifyAnswer`): cited IDs must exist in the answerer's approved facts. Answers with no valid evidence become an explicit **unknown**; answers citing unapproved or foreign IDs are **rewritten** from verified facts and marked "rewritten from approved facts only". For lifestyle dimensions the check is strict: an unshared attribute can never be reported as known.
-6. **Summary**: Gemini proposes common ground, differences, and an explanation; every item must cite valid IDs (common ground must cite both people), or it is dropped. **Unknowns and the verdict are deterministic** (`clarify-first` vs `worth-introducing`). There is no score, percentage, or probability.
+6. **Summary**: assembled **deterministically** from verified facts (common ground, stated differences, unknowns, verdict `clarify-first` vs `worth-introducing`) — no extra model call, because verified structured facts already contain everything a summary may say. It also lists **shared activities** (Food & Coffee, Parks & Outdoors, Concerts & Events, Culture & Activities) derived only from confirmed shared interests; after a mutual yes each links to verified real options. Agents never name venues or events. There is no score, percentage, or probability.
 7. **Consent loop**: an open unknown links to the existing compatibility-question workflow. Only a consented, validated answer updates the profile; the deterministic recommendation is recalculated, and the saved investigation is marked stale.
 
-**Bounds and failure handling.** ≤3 rounds, ≤7 planned model calls plus ≤2 short rate-limit retries, 1,500 output tokens per turn and 2,500 for the summary, a whole-investigation deadline of 85 s with per-call timeouts and abort on client disconnect (`maxDuration` 120). Failures never throw away verified work: no turns yields an explicit error and the scripted option; a mid-way failure keeps completed rounds, drops a dangling question, and labels a summary "assembled without AI". Raw provider errors are never shown.
+**Bounds and failure handling.** 2 rounds by default (≤3), ≤6 logical model calls and ≤8 HTTP requests including at most 2 retries per investigation (retries happen inside `generateJSON`), 1,200 output tokens per turn, a whole-investigation deadline of 85 s with per-call timeouts and abort on client disconnect (`maxDuration` 120). Typical live cost: **3 requests** (Phase 2: up to 7 calls + 2 retries). Investigations start only on an explicit click — never on render or refresh — and a completed live conversation for identical approved facts is **reused for 30 minutes** (server memory, fictional data only); "Live with Gemini" under _Run it again_ bypasses reuse. Failures never throw away verified work: no turns yields an explicit error and the scripted option; a mid-way failure keeps completed rounds, drops a dangling question, and labels the summary as assembled without AI. Raw provider errors are never shown.
 
 **Prompt-injection resistance.** System instructions are constant strings: names, bios, and questions travel only in the JSON data payload, which is labeled untrusted. Defense does not rely on the prompt: the model cannot change eligibility, cannot cite facts that were never sent to it, and its unverifiable claims are replaced. Tests simulate a model that obeys an injected bio.
 
 **Scripted demonstration.** `scriptedBrain()` is a template "brain" that goes through the same orchestrator and verifier, runs in the browser, makes no network calls, and is labeled _PREDEFINED DEMONSTRATION · SCRIPTED · NOT AI-GENERATED_ on every turn.
 
+## Real-world date recommendations (Phase 2.2)
+
+Implementation: `src/lib/places/` (types, curated data, providers), `src/lib/date-discovery.ts` (engine), `src/components/date-discovery.tsx` (UI), `/api/ai/dates` (`mode: "venues"`), `/api/places` (optional live OSM).
+
+**Kazakhstan demo configuration.** Country Kazakhstan, default city **Astana**, optional **Almaty**, time zone `Asia/Almaty` (UTC+5 since 2024), currency KZT. Cities are configuration entries (`cities` in `places/types.ts`) with a bounding box and budget bands, so US cities can be added later with data or a provider and no engine/UI changes.
+
+**Providers.**
+
+| Provider | Kind | Data | Notes |
+| --- | --- | --- | --- |
+| Curated places | Real, curated | 26 cafés, restaurants, parks, museums from **OpenStreetMap** (retrieved 2026-11-14 via a handful of Nominatim requests) | OSM IDs, names, coordinates, street addresses and website tags exactly as recorded (transliterated street names alongside the original). No ratings, prices or opening hours. © OpenStreetMap contributors (ODbL). Parks are the only "free" items. |
+| Curated events | Real, curated | 10 upcoming events from **Ticketon.kz**, checked by hand on 2026-11-14 | Title, venue/address (when shown), date and time with `+05:00`, lowest listed "from" price, age limit, official Ticketon URL. Listing-only items are marked "venue not shown". Where the page omitted the year, it is labeled "year inferred from the current listing". |
+| Live OpenStreetMap | Real, live (optional) | Overpass query per city bbox | Off unless `PLACES_OSM_LIVE=true`; 24 h cache, one in-flight request per city, failures isolated and reported. Public Overpass servers were at capacity during development, which is why the demo never depends on them. |
+| Google Places | — | Not implemented | Would need valid credentials and billing; the provider interface (`VenueProvider`) is ready for it. |
+
+**Ticketon.** No documented public API, partner or affiliate API was found (site footer: "For Organizers", "For Advertisers"; robots.txt allows the pages). No scraping, private endpoints or access-control bypasses are used — only a small, manually verified list with links to the official pages. Ticket availability is never claimed; nothing is purchased or reserved.
+
+**Event freshness.** Past events are excluded automatically at runtime (a scheduled event disappears at its start time; an exhibition run after its last day). Every card shows the source and verification date; after 14 days the section warns that the curated list is old. When nothing matches (for example once the November/December events have passed), an honest empty state explains why, instead of inventing events. Only the Bosch exhibition runs into January 2027; refresh `src/lib/places/curated.ts` before later demos.
+
+**Deterministic ranking** (`recommendDates`): (1) mutual match required; (2) approved shared interests; (3) consented mutual availability over 35 days; (4) candidates from the verified layer only; (5) city filter; (6) scheduled events must fit a shared window (an exhibition must overlap its daily hours by ≥ 90 min); (7) budget applies **only to verified prices** (KZT bands: free 0, budget ≤ ₸5,000, moderate ≤ ₸15,000) — unknown prices are labeled "Price not listed" and never filtered; (8) score = shared-interest matches, both/one person's stated activity types, availability fit, verified price/location; (9) up to three, one per group when no category is selected, with **Explore alternatives**. General places get a suggested time inside a shared window but are labeled "opening hours not verified". No travel times are estimated.
+
+**Explanations.** Deterministic reasons cite fact IDs (`shared.interest.music`, `a.kind.concerts-events`, `availability.overlap`). **Explain with Gemini** (explicit consent, one call for up to three items) sends only verified item fields plus approved shared facts; the server recomputes the items itself. Output must cite allowed IDs and is rejected if it adds prices, hours, links, addresses, other venue names, availability claims or scores.
+
+**Proposals.** **Suggest this date** creates a pending proposal with a venue reference (id, name, address, official/map link, source, fixed-time flag). Fixed-time events are checked against the shared availability. It is confirmed only when the other person accepts (simulated and labeled in the guest demo). Real accounts: `003_phase2_2.sql` adds a validated `venue` column and `/api/account` accepts it.
+
 ## Availability, first dates, enrichment, and consent
 
-- **Availability** (`src/lib/planning.ts`): general weekly windows in the person's IANA time zone. Overlap converts both patterns into absolute UTC intervals for the coming week (DST-correct), intersects them, and keeps windows of at least 60 minutes. Results are shown only when **both** people opted to share; missing availability is never treated as "free"; "not open to meeting soon" yields no suggestions. Availability never changes compatibility. Turning sharing off hides the overlap and withdraws open proposals.
-- **First-date ideas** (`src/lib/dates.ts`, `/api/ai/dates`): available only after a mutual connection (enforced in the store reducer; the server recomputes overlap and consent itself). Gemini suggests 2–3 activity _types_ citing shared interests, stated activity preferences, budget level, and overlap windows. A guard rejects suggestions that name venues or state prices, opening hours, reservations, URLs, phone numbers, or addresses; ungrounded items are dropped and labeled templates fill the gap. Nothing is booked.
+- **Availability** (`src/lib/planning.ts`): general weekly windows in the person's IANA time zone. Overlap converts both patterns into absolute UTC intervals (DST-correct), intersects them, and keeps windows of at least 60 minutes. Results are shown only when **both** people opted to share; missing availability is never treated as "free"; "not open to meeting soon" yields no suggestions. Availability never changes compatibility. Turning sharing off hides the overlap and withdraws open proposals.
+- **First-date ideas** (`src/lib/dates.ts`, `/api/ai/dates`): available only after a mutual connection. Gemini suggests 2–3 activity _types_ citing shared facts; a guard rejects invented venue facts; labeled templates fill gaps. Real venues come only from the discovery layer above.
 - **Proposals**: _proposed_ is never a confirmed date; _accepted_ by the other person is. In the guest demo the counterpart response is an explicit simulation. Proposals can be withdrawn, replaced, or cancelled; blocking withdraws them.
-- **Enrichment** (`src/lib/enrichment.ts`, `/api/ai/enrich`): only text the person wrote. Every suggestion must quote the person's own words verbatim (verified server-side). Sensitive inferences (religion, orientation, ethnicity, health, income, politics, personality labels, …) are filtered. Suggestions stay **pending** and are never shared with matchmakers until approved one by one. A keyword-based, clearly labeled non-AI option is available.
+- **Let Piper Understand Your Interests** (`src/lib/enrichment.ts`, `/api/ai/enrich`, `/api/ai/enrich-photo`): only material the person provides — bio, captions they wrote (e.g. on Instagram, pasted by hand), favorite music/artists, hobbies, activities, and optionally their own photos. Text suggestions must quote the person's words verbatim; photo suggestions are ordinary activities/objects phrased as questions ("This photo appears to show hiking. Would you like to add hiking to your interests?"). Nothing about people is inferred (no attractiveness, body, age, ethnicity, health, religion, income, personality); sensitive terms are filtered. Everything is **pending** until approved one by one. The UI labels **confirmed by you**, **AI suggestion**, **unknown (never guessed)** and **private (stays on this device)**. Pasted text and photo previews live only in page memory; **Delete my pasted content & suggestions** clears them and every unapproved suggestion. Guest mode offers a fictional sample. **Photo analysis is off by default** (`ALLOW_PHOTO_ANALYSIS`): free-tier Gemini is not an appropriate configuration for personal photos; when enabled, images are sent once and never stored.
+- **Instagram username** (`src/lib/social.ts`): optional; syntax-checked only (1–30 letters, digits, periods, underscores; no links). It does **not** verify identity or ownership. Piper never fetches, scrapes, logs into or reads Instagram (no unofficial APIs, sessions, headless browsers or third parties) and never asks for passwords. Private by default; a visibility switch shows a plain link to potential matches; removable at any time. It is stored outside the profile, so agents never receive it. Real accounts store it in `member_social` (003) with RLS. An official OAuth integration would require verified permissions and permitted data uses first.
 - **Ready to Connect**: pausing removes you from new introductions in both directions (`recommend` and SQL `eligible_pair`) and blocks new interest; existing matches and messages remain.
-- **Fictional-only AI**: all Phase 2 AI routes accept only fictional demo profiles (or require `ALLOW_REAL_AI_PROCESSING=true` for enrichment in real mode). Agents never message people; private interviews are never sent to another agent.
+- **Fictional-only AI**: all Phase 2 AI routes accept only fictional demo profiles (or require `ALLOW_REAL_AI_PROCESSING=true` in real mode). Agents never message people; private interviews are never sent to another agent.
 
 ## Matching logic
 
@@ -181,6 +251,8 @@ Investigations support `children`, `smoking`, `drinking`, and `pace`. Questions 
 
 **Phase 2:** then run `supabase/migrations/002_phase2.sql` (additive; `001` is unchanged). It makes `eligible_pair` respect Ready-to-Connect, and adds `member_planning` (availability and date preferences; readable only by the owner and, when the owner opts to share, by mutual, unblocked matches) and `date_proposals` (match members only; responses via `respond_date_proposal`, so nobody can accept their own proposal). `/api/account` exposes `planning`, `propose`, and `proposal-response` actions and returns visible planning and proposals. The real-account page does not yet render a date planner; wiring the existing `DatePlanner` UI to these actions is the remaining integration step once a Supabase project is available. AI investigations are not enabled for real accounts.
 
+**Phase 2.2:** then run `supabase/migrations/003_phase2_2.sql` (additive). It adds a validated `venue` JSON column to `date_proposals` and the `member_social` table for the optional Instagram username. Because 001 lets approved members read `profiles.data`, the username is deliberately **not** stored there: `member_social` is writable only by its owner and readable by others only while visibility is on, the owner is approved, and neither person blocked the other. `/api/account` gains a `social` action, accepts `venue` on `propose`, and returns visible usernames.
+
 The migration creates `profiles`, `decisions`, `compatibility_questions`, `matches`, `messages`, `feedback`, `blocks`, and `reports`. All have row-level security. Anonymous users receive no table access. Publicly shareable profiles are visible only to authenticated, unblocked users; draft profiles stay with their owner. No interview transcript table exists.
 
 `record_decision` serializes each pair with a database transaction lock and creates a match only after reciprocal interest and SQL eligibility checks. Clients cannot insert matches or impersonate another person’s decision. Messages require membership in an unblocked match and a sender ID equal to `auth.uid()`. Consent updates run through `answer_question`; only the subject can approve an answer. Block/report and application-data deletion use authenticated RPCs with fixed search paths.
@@ -199,14 +271,17 @@ npm run build
 npm run test:e2e
 ```
 
-- **78 unit/PostgreSQL tests** (Vitest):
+- **143 unit/PostgreSQL tests** (Vitest, 9 files):
   - Phase 1 (34): reciprocal ages/genders/locations/goals, hard constraints, blocks, deterministic ranking, evidence, unknowns, consent/decline/update behavior, explicit mutual interest, message authorization, feedback updates, SQL impersonation prevention and deletion.
-  - Agents (18, `tests/agents.test.ts`): round/turn/call limits, capped rate-limit retries, refusal of ineligible pairs, context separation (each agent sees only its own principal's facts and never preferences/dealbreakers), constant system instructions, a compromised model obeying an injected bio, unknown handling, rewriting of unverified or foreign citations, summary verification, no scores, API failure and partial results, raw-error hiding, the scripted path.
-  - Availability, dates, enrichment, Ready to Connect, persistence (21, `tests/phase2.test.ts`): exact overlap intervals, no overlap, different time zones across the date line, DST, not-open/missing/unconsented availability, date planning only after mutual approval, shared-interest grounding, venue-fact rejection, proposal versus confirmed date, replacement/revocation/blocking, pending/approved/rejected enrichment with no automatic mutation, paused users, v1→v2 migration.
-  - SQL Phase 2 (5, `tests/database-phase2.test.ts`): paused people cannot receive new interest (with a control), existing matches survive pausing, availability privacy and consent, proposal impersonation/self-confirmation prevention, blocking and deletion cascades.
-- **14 browser tests** (Playwright, desktop + mobile): the Phase 1 guest lifecycle, AI-failure fallback, all routes (including `/matchmaker` and `/agents`) fitting the viewport, the complete 15-step Phase 2 journey, the live-stream UI with a corrected turn and an early-ended stream, the agent-failure → scripted fallback, and Phase 1 → Phase 2 browser-data migration.
-- **Live provider checks:** minimal Gemini request plus onboarding/extraction, question generation, grounded evidence, and invalid-input rejection.
-- Production build, TypeScript, and ESLint passed during implementation.
+  - Gemini client (16, `tests/gemini.test.ts`): model configuration and fallback rules, classification of 401/403/400-key/404/429 short/429 daily (per-model vs project)/500/503/504/abort/network, no retries after daily quota, fail-fast during cooldown, backoff honoring `RetryInfo`, not waiting for long delays, one 504 retry then circuit breaker, request caps, no switching after auth errors, 404 memory, malformed JSON, request accounting, diagnostics and error messages free of secrets.
+  - Agents (24, `tests/agents.test.ts`): two default rounds, a conditional third round (runs when healthy, skipped after retries), call-count limits, rule answers without a model call, topic-only fact minimization, no transcript, context separation, constant system instructions, prompt injection (the compromised answer model is never asked about unshared dimensions), grounding rewrites, deterministic summary without scores, shared activities grounded in both people's facts, failures and partial results, the scripted path.
+  - Places, events and recommendations (27, `tests/places.test.ts`): curated data validation, source attribution, official link validation (look-alike hosts rejected), no stored ratings/hours, `+05:00` times, mutual-match requirement, city and category filters, variety, expired-event exclusion, time-zone formatting, availability compatibility, unshared availability, exhibition slots, missing prices, budget filtering, grounded ranking, empty state, provider failure isolation, OSM tag mapping, caching/single-flight, Gemini explanation verification, venue proposal transitions.
+  - Instagram and enrichment (11, `tests/social-enrichment.test.ts`): username validation, visibility consent, removal, never in the profile or agent context, no network requests, no Instagram access anywhere in the source, migration of older saved data, photo label filtering of personal/sensitive content, pending approval/rejection, deletion of pasted-content suggestions, photo route disabled by default.
+  - Availability, dates, enrichment, Ready to Connect, persistence (21, `tests/phase2.test.ts`), now in Astana time.
+  - SQL Phase 2 (5) and **SQL Phase 2.2 (5, `tests/database-phase2-2.test.ts`)**: hidden usernames unreadable even by a match, visibility and blocking, owner-only writes, username validation, venue column validation, cascade on deletion.
+- **26 browser tests** (Playwright, 13 scenarios × desktop + mobile): everything above plus Discover Your First Date in Astana (verified card fields, Ticketon/OSM links, availability fit, proposal → simulated acceptance, Almaty, parks, alternatives, persistence, shared-activity deep link), the post-expiry empty state, "Live Gemini temporarily unavailable" with scripted fallback, rule-answer labeling in a live stream, `/diagnostics` without secrets, Instagram validation/visibility/removal, photos staying local, and deletion of pasted content. Event-dependent tests pin the browser clock to 2026-11-14.
+- **Live provider checks** (2026-11-14): see _Live verification_ above.
+- Production build, TypeScript, and ESLint pass.
 
 Browser tests use installed Microsoft Edge on Windows and Playwright Chromium on other platforms. On a new Linux/macOS environment, run `npx playwright install chromium`. The test configuration starts a local server when needed. CI tests the production build. Mobile verification is Chromium device emulation, not a physical iPhone or Safari test. Screenshots are written to ignored `artifacts/`; traces on failure go to ignored `test-results/`.
 
@@ -251,7 +326,7 @@ git log --oneline --all --decorate -10
 git push -u origin Piper
 ```
 
-Phase 2 is developed on the `Piper` branch (based on `origin/main`) and is not merged into `main`.
+Phase 2 and Phase 2.2 are developed on the `Piper` branch and are not merged into `main`.
 
 If the remote gained commits, reconcile them normally before pushing. `.github/workflows/ci.yml` runs checks, the production build, and browser tests on pushes/PRs without AI credentials.
 
@@ -263,6 +338,11 @@ src/components/           Landing, interview, profile editor, introductions, mes
                           agents (AI Matchmakers), date-planner, availability-editor, matchmaker hub
 src/components/ui/        Locally owned shadcn-style Radix/CVA Button
 src/lib/agents.ts         Approved contexts, planner, bounded orchestrator, verification, scripted brain
+src/lib/gemini-health.ts  Error classification, short-lived cooldowns, non-sensitive status
+src/lib/activities.ts     The four discovery groups and interest → group mapping
+src/lib/places/           Place/event schemas, city config, curated OSM/Ticketon data, providers
+src/lib/date-discovery.ts Deterministic real-world date ranking
+src/lib/social.ts         Optional Instagram username (syntax only, private by default)
 src/lib/planning.ts       Availability schema, IANA time-zone overlap, proposals
 src/lib/dates.ts          Grounded first-date ideas, venue-fact guard, templates
 src/lib/enrichment.ts     Quoted, non-sensitive, pending profile suggestions
@@ -270,7 +350,7 @@ src/lib/profile.ts        Zod schemas, supported dimensions, unknown handling
 src/lib/matching.ts       Reciprocal filters, weighted rank, explainability
 src/lib/demo-store.ts     Isolated, validated local-storage adapter and pure transitions
 src/lib/fixtures.ts       18 explicitly fictional profiles and sample interview
-src/lib/gemini.ts         Server-only SDK, structured output, fallback/error handling
+src/lib/gemini.ts         Server-only SDK, structured output, bounded retries, fallback, user-safe errors
 src/lib/supabase/         Browser/server auth clients
 src/proxy.ts              Supabase cookie refresh for account routes
 supabase/migrations/      PostgreSQL tables, grants, RLS, transactional RPCs
@@ -291,10 +371,12 @@ The stack is Next.js App Router, React, TypeScript, Tailwind CSS 4, shadcn-compa
 - Guest storage is local, readable by other users of the same browser profile, and not cross-device. Private interviews disappear on reload. Synthetic answers remain marked as demo behavior.
 - AI extraction can misinterpret wording; human review remains mandatory. No calibrated romantic probability is claimed.
 - Agent conversations are bounded, user-initiated, and fictional-only. They are not autonomous and never run on real profiles. Enabling them for real accounts requires a provider data agreement, explicit per-person consent, server-side profile loading (not client-supplied profiles), and persistent rate limiting.
-- Free-tier Gemini quotas are small: a 7-call live investigation can hit 429s. The UI then keeps verified turns or offers the labeled scripted demonstration. Live latency varies widely (about 3–40 s per call observed).
+- Free-tier Gemini quotas are small. A live investigation now costs about 3 requests, but repeated demos can still exhaust a daily quota; the app then labels live AI as unavailable until the provider's reset and offers the scripted demonstration. Cooldown state is per server process (not shared across serverless instances) and resets on restart.
 - Guest AI routes trust client-supplied fictional profiles and the client's assertion of a mutual match; this is acceptable only for fictional demo data. Real-account mutual checks live in SQL.
-- Date ideas are activity types only. There is no verified location provider, so there are no venue names, prices, or opening hours. Grounding of free text is enforced via cited IDs and pattern guards, which reduce but cannot eliminate model error.
-- Image enrichment (P2) is not implemented.
+- Real places and events are a small, manually verified snapshot (26 places, 10 events, verified 2026-11-14). Most events take place in November–December 2026; after that the empty state appears until `curated.ts` is refreshed. Prices are "from" prices at verification; ticket availability and opening hours are not verified. Some Ticketon listings did not show a venue or year (labeled). Venue names in Kazakh/Russian are shown with English names only where a standard translation exists. Grounding of free text is enforced via cited IDs and pattern guards, which reduce but cannot eliminate model error.
+- No Ticketon API integration (none is publicly documented) and no Google Places provider (needs credentials and billing). The live OpenStreetMap provider depends on public Overpass servers, which were overloaded during development.
+- Photo analysis is implemented but disabled by default and was not live-tested; it requires an operator decision and a suitable provider configuration.
+- The real-account UI does not yet render the date planner, discovery, or Instagram card; the API and SQL support them.
 - Voice, embeddings, and advanced learning are intentionally outside this MVP.
 
 ## Official references

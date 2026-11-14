@@ -17,13 +17,21 @@ import {
   planningSchema,
   proposalSchema,
   withinWindows,
+  venueRefSchema,
   type DateCategory,
   type Planning,
   type Proposal,
+  type VenueRef,
 } from "./planning";
 import { sessionSchema, type AgentSession } from "./agents";
 import { dateIdeasResultSchema, type DateIdeasResult } from "./dates";
 import { suggestionSchema, type Suggestion } from "./enrichment";
+import {
+  emptySocial,
+  instagramSchema,
+  socialSchema,
+  type Instagram,
+} from "./social";
 
 /** Current key. Phase 1 (v1) data is migrated on first load, never discarded. */
 export const storageKey = "pied-piper:fictional-demo:v2";
@@ -70,6 +78,8 @@ const stateSchema = z.object({
   dateIdeas: z.record(z.string(), dateIdeasResultSchema),
   proposals: z.array(proposalSchema).max(200),
   enrichment: z.array(suggestionSchema).max(60),
+  /** Optional Instagram username, kept apart from the profile (Phase 2.2). */
+  social: socialSchema.default(emptySocial),
 });
 export type DemoState = z.infer<typeof stateSchema>;
 export function initialDemo(): DemoState {
@@ -89,6 +99,7 @@ export function initialDemo(): DemoState {
     dateIdeas: {},
     proposals: [],
     enrichment: [],
+    social: emptySocial(),
   };
 }
 /** Upgrade any supported saved state to the current schema. Throws if invalid. */
@@ -105,6 +116,7 @@ export function migrateDemo(raw: unknown): DemoState {
     dateIdeas: {},
     proposals: [],
     enrichment: [],
+    social: emptySocial(),
   });
 }
 export type DemoAction =
@@ -139,6 +151,10 @@ export type DemoAction =
       start: string;
       end: string;
       now?: string;
+      /** A verified place/event chosen in "Discover Your First Date". */
+      venue?: VenueRef;
+      /** Days ahead to check availability (events can be weeks away). */
+      horizonDays?: number;
     }
   | {
       type: "proposal-response";
@@ -148,7 +164,10 @@ export type DemoAction =
     }
   | { type: "withdraw-proposal"; id: string; proposalId: string }
   | { type: "enrichment-suggestions"; suggestions: Suggestion[] }
-  | { type: "enrichment-decision"; suggestionId: string; approve: boolean };
+  | { type: "enrichment-decision"; suggestionId: string; approve: boolean }
+  /** Delete every pending/rejected suggestion (approved ones are on the profile). */
+  | { type: "enrichment-clear" }
+  | { type: "social"; instagram: Instagram | null };
 export function matched(state: DemoState, id: string) {
   const peer = state.candidates.find((c) => c.id === id);
   return (
@@ -174,6 +193,20 @@ export function reduceDemo(state: DemoState, action: DemoAction): DemoState {
   if (action.type === "reset-decisions")
     return { ...state, decisions: {}, counterparts: {} };
   if (!state.profile) throw new Error("Review and approve your profile first.");
+  if (action.type === "social")
+    return {
+      ...state,
+      social: {
+        instagram: action.instagram
+          ? instagramSchema.parse(action.instagram)
+          : null,
+      },
+    };
+  if (action.type === "enrichment-clear")
+    return {
+      ...state,
+      enrichment: state.enrichment.filter((s) => s.status === "approved"),
+    };
   if (action.type === "ready")
     return {
       ...state,
@@ -362,10 +395,11 @@ export function reduceDemo(state: DemoState, action: DemoAction): DemoState {
     };
   if (action.type === "propose") {
     const now = action.now ? new Date(action.now) : new Date();
+    const horizon = Math.min(Math.max(action.horizonDays ?? 7, 1), 35);
     const overlap = computeOverlap(
       state.planning[GUEST_ID]?.availability,
       state.planning[peer.id]?.availability,
-      { from: now },
+      { from: now, days: horizon },
     );
     if (overlap.status !== "ok")
       throw new Error(
@@ -380,6 +414,7 @@ export function reduceDemo(state: DemoState, action: DemoAction): DemoState {
       id: crypto.randomUUID(),
       peerId: peer.id,
       activity: action.activity,
+      ...(action.venue ? { venue: venueRefSchema.parse(action.venue) } : {}),
       start: new Date(action.start).toISOString(),
       end: new Date(action.end).toISOString(),
       proposedBy: "you",

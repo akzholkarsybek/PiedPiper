@@ -11,12 +11,14 @@ import {
   Quote,
   ShieldCheck,
   Sparkles,
+  Trash2,
   X,
 } from "lucide-react";
 import { AppShell, NoProfile } from "./app-shell";
 import { PiperMark } from "./brand";
 import { Button } from "./ui/button";
 import { AvailabilityEditor } from "./availability-editor";
+import { PhotoSuggestions } from "./photo-suggestions";
 import {
   dispatchDemo,
   GUEST_ID,
@@ -223,15 +225,27 @@ const kindLabel: Record<Suggestion["kind"], string> = {
   summary: "Profile summary",
 };
 
+const emptyInput = (): EnrichmentInput => ({
+  bio: "",
+  interests: "",
+  music: "",
+  activities: "",
+  captions: "",
+});
+/** Fictional content for the guest demo (never a real person's posts). */
+const fictionalSample = (): EnrichmentInput => ({
+  bio: "Weekday architect, weekend explorer. I like slow mornings with good coffee and long walks along the river.",
+  interests:
+    "Bouldering twice a week, film photography, trying every new noodle place.",
+  music: "Film scores, a bit of jazz, and any live show with a string section.",
+  activities:
+    "Saturday hikes outside the city, Sunday gallery visits, cooking for friends.",
+  captions:
+    "Caught the last light from the trail today 🌄 · Third pottery class, still lopsided · Live soundtrack night was unreal",
+});
 function Enrichment({ state }: { state: DemoState }) {
   const profile = state.profile!;
-  const [input, setInput] = useState<EnrichmentInput>({
-      bio: "",
-      interests: "",
-      music: "",
-      activities: "",
-      captions: "",
-    }),
+  const [input, setInput] = useState<EnrichmentInput>(emptyInput),
     [consent, setConsent] = useState(false),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
@@ -303,17 +317,46 @@ function Enrichment({ state }: { state: DemoState }) {
     >
       <div className="section-intro">
         <h2 id="enrich-title">
-          Help Piper <em>get to know me.</em>
+          Let Piper <em>understand your interests.</em>
         </h2>
         <p>
-          Optional. Share things you wrote yourself. Piper proposes interests,
-          activities, conversation starters and a summary, and you approve each
-          one. No social accounts, no scraping, and nothing sensitive is ever
-          inferred.
+          Optional, and a lot quicker than writing everything out. Paste your
+          own bio, captions you wrote (for example on Instagram), favorite
+          music, hobbies and activities. Piper proposes interests, activities,
+          conversation starters and a summary, and you approve each one. Piper
+          never connects to social accounts or scrapes anything, and never
+          infers sensitive traits.
         </p>
+        <div className="info-legend" aria-label="How information is labeled">
+          <span className="confirmed">Confirmed by you · on your profile</span>
+          <span className="suggested">AI suggestion · needs your approval</span>
+          <span className="unknown">
+            Unknown · never guessed (e.g. religion, income, health)
+          </span>
+          <span className="private">
+            Private · what you paste stays on this device
+          </span>
+        </div>
       </div>
       <div className="enrich-grid">
         <div className="enrich-form">
+          <p className="fine-print">
+            <ShieldCheck size={13} /> Confirmed interests:{" "}
+            {profile.interests.length
+              ? profile.interests.join(", ")
+              : "none yet"}
+            .{" "}
+            <button
+              type="button"
+              className="text-link"
+              onClick={() => {
+                setInput(fictionalSample());
+                setInfo("");
+              }}
+            >
+              Use Jamie’s fictional sample
+            </button>
+          </p>
           {fields.map((f) => (
             <label key={f.key}>
               {f.label} <small>{f.hint}</small>
@@ -361,6 +404,32 @@ function Enrichment({ state }: { state: DemoState }) {
               Suggest from keywords (no AI)
             </Button>
           </div>
+          <PhotoSuggestions
+            existing={{ interests: profile.interests }}
+            onSuggestions={(suggestions, message) =>
+              store(suggestions, message)
+            }
+          />
+          <div className="inline-actions">
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={
+                !Object.values(input).some((v) => v.trim()) &&
+                !state.enrichment.some((s) => s.status !== "approved")
+              }
+              onClick={() => {
+                setInput(emptyInput());
+                dispatchDemo({ type: "enrichment-clear" });
+                setError("");
+                setInfo(
+                  "Deleted the text you pasted and every unapproved suggestion. Approved items stay on your profile, where you can edit them.",
+                );
+              }}
+            >
+              <Trash2 size={14} /> Delete my pasted content & suggestions
+            </Button>
+          </div>
           {error && (
             <p role="alert" className="error-text">
               {error}
@@ -390,7 +459,9 @@ function Enrichment({ state }: { state: DemoState }) {
                   <em>
                     {s.source === "gemini"
                       ? "GEMINI SUGGESTION"
-                      : "KEYWORD MATCH · NOT AI"}
+                      : s.source === "photo"
+                        ? "FROM YOUR PHOTO · PLEASE CONFIRM"
+                        : "KEYWORD MATCH · NOT AI"}
                   </em>
                 </span>
                 <strong>

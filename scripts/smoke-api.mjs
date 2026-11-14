@@ -13,7 +13,7 @@ async function post(path, body) {
   return data;
 }
 const content =
-  "This is a fictional test. I'm Jamie, a 32-year-old man in New York. I want a long-term relationship with women or nonbinary people aged 27 to 36 in my city. I enjoy hiking, cooking, art, and reading. Kindness, curiosity and family are my values. I want children and don't smoke. My hard dealbreakers are smoking and not wanting children. I drink socially and have an active lifestyle. I prefer an active partner.";
+  "This is a fictional test. I'm Jamie, a 32-year-old man in Astana. I want a long-term relationship with women or nonbinary people aged 27 to 36 in my city. I enjoy hiking, live music, coffee, cooking, and art. Kindness, curiosity and family are my values. I want children and don't smoke. My hard dealbreakers are smoking and not wanting children. I drink socially and have an active lifestyle. I prefer an active partner.";
 try {
   const result = await post("/api/ai/onboard", {
     messages: [{ role: "user", content }],

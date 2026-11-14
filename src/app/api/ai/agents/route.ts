@@ -8,8 +8,10 @@ import {
   AgentError,
   DEFAULT_DEADLINE_MS,
   geminiBrain,
+  investigationBasis,
   runInvestigation,
   type AgentEvent,
+  type AgentSession,
 } from "@/lib/agents";
 
 export const runtime = "nodejs";
@@ -21,7 +23,28 @@ const bodySchema = z.object({
   handled: z.record(z.string().max(220), z.enum(["declined", "shared"])),
   /** The guest explicitly agreed to send fictional profile data to Gemini. */
   processingConsent: z.literal(true),
+  /** Reuse a recent identical, completed conversation instead of new calls. */
+  reuse: z.boolean().default(true),
 });
+
+/**
+ * Completed live conversations for identical approved inputs are reused for a
+ * short time, so page refreshes and repeated clicks never spend quota. Only
+ * fictional demo data is cached, in this server process, for 30 minutes.
+ */
+const REUSE_MS = 30 * 60 * 1000;
+const recent = new Map<string, { at: number; session: AgentSession }>();
+function reuseKey(body: z.infer<typeof bodySchema>) {
+  const handled = Object.entries(body.handled).sort(([x], [y]) =>
+    x.localeCompare(y),
+  );
+  return JSON.stringify([
+    body.a.id,
+    body.b.id,
+    investigationBasis(body.a, body.b),
+    handled,
+  ]);
+}
 
 /**
  * Streams a bounded, two-agent Gemini investigation as NDJSON events.
@@ -59,7 +82,33 @@ export async function POST(req: NextRequest) {
         }
       };
       try {
-        await runInvestigation({
+        const key = reuseKey(body);
+        const now = Date.now();
+        for (const [k, v] of recent)
+          if (now - v.at > REUSE_MS) recent.delete(k);
+        const hit = body.reuse ? recent.get(key) : undefined;
+        if (hit) {
+          const s = hit.session;
+          const minutes = Math.max(1, Math.round((now - hit.at) / 60000));
+          const session: AgentSession = {
+            ...s,
+            notice:
+              `Reused the verified conversation from ${minutes} min ago for the same approved facts — no new Gemini requests. ${s.notice ?? ""}`
+                .trim()
+                .slice(0, 400),
+          };
+          send({
+            type: "plan",
+            topics: s.topics,
+            agents: s.agents,
+            source: s.source,
+          });
+          for (const turn of s.turns) send({ type: "turn", turn });
+          if (s.summary) send({ type: "summary", summary: s.summary });
+          send({ type: "complete", session });
+          return;
+        }
+        const session = await runInvestigation({
           a: body.a,
           b: body.b,
           handled: body.handled,
@@ -68,6 +117,10 @@ export async function POST(req: NextRequest) {
           deadlineMs: DEFAULT_DEADLINE_MS,
           signal: abort.signal,
         });
+        if (session.status === "complete") {
+          if (recent.size > 200) recent.clear();
+          recent.set(key, { at: Date.now(), session });
+        }
       } catch (error) {
         send({
           type: "error",

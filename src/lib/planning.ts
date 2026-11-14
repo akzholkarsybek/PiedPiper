@@ -335,13 +335,32 @@ export const proposalStatuses = [
   "declined",
   "withdrawn",
 ] as const;
+/**
+ * A reference to a verified place or event from the places layer. Only ids,
+ * names, links and source travel with a proposal; nothing is booked.
+ */
+export const venueRefSchema = z.object({
+  kind: z.enum(["place", "event"]),
+  id: z.string().min(3).max(80),
+  name: z.string().min(1).max(160),
+  address: z.string().max(160).nullable(),
+  /** Official website/ticket page, or null when none is verified. */
+  url: z.url().max(400).nullable(),
+  mapUrl: z.url().max(400).nullable(),
+  source: z.string().max(80),
+  /** True when the time is the event's own scheduled time. */
+  fixedTime: z.boolean(),
+});
+export type VenueRef = z.infer<typeof venueRefSchema>;
 export const proposalSchema = z.object({
   id: z.string().min(1).max(100),
   peerId: z.string().min(1).max(100),
   activity: z.object({
     category: z.enum(dateCategories),
-    title: z.string().min(1).max(100),
+    title: z.string().min(1).max(160),
   }),
+  /** Optional verified venue; older proposals have none. */
+  venue: venueRefSchema.optional(),
   start: z.iso.datetime(),
   end: z.iso.datetime(),
   proposedBy: z.enum(["you", "synthetic"]),

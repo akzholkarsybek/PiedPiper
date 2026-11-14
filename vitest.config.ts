@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 export default defineConfig({
   test: {
@@ -5,5 +6,6 @@ export default defineConfig({
     testTimeout: 20000,
     hookTimeout: 30000,
   },
-  resolve: { alias: { "@": new URL("./src", import.meta.url).pathname } },
+  // fileURLToPath handles Windows drive letters and spaces in the path.
+  resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
 });

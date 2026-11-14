@@ -1,22 +1,5 @@
-import { test, expect, type Page } from "@playwright/test";
-
-async function createJamie(page: Page) {
-  await page.goto("/onboarding?demo=1");
-  await page.getByLabel("I am at least 18 years old.").check();
-  await page
-    .getByRole("button", { name: "Explore the predefined demonstration" })
-    .click();
-  await page.getByRole("button", { name: "Send fictional sample 1" }).click();
-  await page.getByRole("button", { name: "Send fictional sample 2" }).click();
-  await page.getByRole("button", { name: "Review my profile" }).click();
-  await page
-    .getByLabel("I’ve reviewed this profile and approve sharing it.")
-    .check();
-  await page
-    .getByRole("button", { name: "Approve & meet your introductions" })
-    .click();
-  await expect(page).toHaveURL("/discover");
-}
+import { test, expect } from "@playwright/test";
+import { createJamie, mockStatus } from "./helpers";
 
 test("Phase 2 journey: matchmakers investigate, consent clarifies, mutual match, availability and first-date proposal", async ({
   page,
@@ -51,10 +34,11 @@ test("Phase 2 journey: matchmakers investigate, consent clarifies, mutual match,
   await expect(
     page.getByRole("heading", { name: "One important question first." }),
   ).toBeVisible({ timeout: 20000 });
-  await expect(page.locator(".agent-turn")).toHaveCount(6);
+  // Two rounds by default; the third runs only for an important open question.
+  await expect(page.locator(".agent-turn")).toHaveCount(4);
   await expect(page.getByText("Unknown · not shared yet")).toBeVisible();
   await expect(
-    page.getByText("You both enjoy hiking, cooking, art and reading."),
+    page.getByText("You both enjoy hiking, music, coffee and art."),
   ).toBeVisible();
   await page.screenshot({
     path: `artifacts/${testInfo.project.name}-agents.png`,
@@ -186,6 +170,7 @@ test("Phase 2 journey: matchmakers investigate, consent clarifies, mutual match,
 test("live matchmaker stream renders labeled Gemini turns and verified evidence", async ({
   page,
 }) => {
+  await mockStatus(page);
   await createJamie(page);
   const turn = (
     id: string,
@@ -277,13 +262,14 @@ test("live matchmaker stream renders labeled Gemini turns and verified evidence"
   // The stream ended without a completion event: partial result, honestly labeled.
   await expect(page.getByText(/ended early/)).toBeVisible();
   await expect(
-    page.getByText("SUMMARY ASSEMBLED FROM APPROVED DATA · NO AI"),
+    page.getByText("SUMMARY ASSEMBLED FROM VERIFIED FACTS · NO AI CALL"),
   ).toBeVisible();
 });
 
 test("AI matchmaker failure offers the labeled scripted demonstration", async ({
   page,
 }) => {
+  await mockStatus(page);
   await createJamie(page);
   await page.route("**/api/ai/agents", (route) =>
     route.fulfill({
@@ -326,7 +312,7 @@ test("Phase 1 browser data migrates to the Phase 2 schema without losing progres
       name: "Jamie",
       age: 32,
       gender: "man",
-      city: "New York",
+      city: "Astana",
       intent: "long-term",
       bio: "Fictional.",
       interests: ["hiking", "cooking", "art", "reading"],

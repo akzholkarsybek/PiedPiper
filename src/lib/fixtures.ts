@@ -14,10 +14,10 @@ const seed = [
     "Lena",
     30,
     "woman",
-    "New York",
+    "Astana",
     "long-term",
-    "Architect of cozy spaces and very ambitious weekend plans. Usually found in a bookstore, or taking the scenic route home.",
-    ["hiking", "cooking", "art", "reading"],
+    "Architect of cozy spaces and very ambitious weekend plans. Usually found at a concert, in a bookstore, or taking the scenic route home with a coffee.",
+    ["hiking", "music", "coffee", "art", "reading"],
     ["kindness", "curiosity", "family"],
     null,
     "no",
@@ -29,7 +29,7 @@ const seed = [
     "Maya",
     29,
     "woman",
-    "New York",
+    "Astana",
     "long-term",
     "A museum afternoon, a great meal, and a conversation that forgets about the time. That is my kind of day.",
     ["art", "cooking", "travel", "reading"],
@@ -44,7 +44,7 @@ const seed = [
     "Sophie",
     33,
     "woman",
-    "New York",
+    "Astana",
     "long-term",
     "Teacher, trail wanderer, and enthusiastic home cook. Looking for something steady with room for adventure.",
     ["hiking", "cooking", "music", "gardening"],
@@ -59,7 +59,7 @@ const seed = [
     "Jules",
     31,
     "nonbinary",
-    "New York",
+    "Astana",
     "long-term",
     "Making things, making playlists, and making space for the people I love.",
     ["art", "music", "reading", "cooking"],
@@ -74,7 +74,7 @@ const seed = [
     "Emma",
     28,
     "woman",
-    "Boston",
+    "Almaty",
     "long-term",
     "A slow Sunday enthusiast with a soft spot for old movies and new cities.",
     ["film", "travel", "reading"],
@@ -89,7 +89,7 @@ const seed = [
     "Nora",
     35,
     "woman",
-    "New York",
+    "Astana",
     "life-partner",
     "Building a life full of dinner parties, garden projects, and dependable people.",
     ["gardening", "cooking", "hiking"],
@@ -104,7 +104,7 @@ const seed = [
     "Ava",
     27,
     "woman",
-    "New York",
+    "Astana",
     "exploring",
     "Always collecting a new story, a new recipe, or a new stamp in my passport.",
     ["travel", "cooking", "dance"],
@@ -119,7 +119,7 @@ const seed = [
     "Claire",
     38,
     "woman",
-    "New York",
+    "Astana",
     "long-term",
     "A runner who reads novels, a lawyer who loves bad puns. Happy with a small, thoughtful circle.",
     ["running", "reading", "art"],
@@ -134,7 +134,7 @@ const seed = [
     "Iris",
     32,
     "woman",
-    "New York",
+    "Astana",
     "long-term",
     "Coffee, ceramics, and a very opinionated rescue cat. I appreciate people who mean what they say.",
     ["art", "reading", "coffee"],
@@ -149,7 +149,7 @@ const seed = [
     "Ellie",
     26,
     "woman",
-    "New York",
+    "Astana",
     "long-term",
     "Live music, neighborhood walks, and a kitchen full of experiments.",
     ["music", "cooking", "walking"],
@@ -164,7 +164,7 @@ const seed = [
     "Daniel",
     32,
     "man",
-    "New York",
+    "Astana",
     "long-term",
     "Designing useful things and plotting the next trail. I make a genuinely good Sunday breakfast.",
     ["hiking", "cooking", "art", "reading"],
@@ -179,7 +179,7 @@ const seed = [
     "Marcus",
     35,
     "man",
-    "New York",
+    "Astana",
     "long-term",
     "Community-minded, book-obsessed, and always up for a friendly game of tennis.",
     ["reading", "tennis", "cooking"],
@@ -194,7 +194,7 @@ const seed = [
     "Theo",
     29,
     "man",
-    "New York",
+    "Astana",
     "long-term",
     "A musician with a day job and a carefully curated list of little restaurants.",
     ["music", "art", "cooking"],
@@ -209,7 +209,7 @@ const seed = [
     "Oliver",
     41,
     "man",
-    "New York",
+    "Astana",
     "life-partner",
     "A dad, a cyclist, and a believer in showing up. Looking for a lasting partnership.",
     ["cycling", "cooking", "travel"],
@@ -224,7 +224,7 @@ const seed = [
     "Sam",
     30,
     "nonbinary",
-    "New York",
+    "Astana",
     "long-term",
     "A nature nerd, patient listener, and maker of very elaborate picnic sandwiches.",
     ["hiking", "gardening", "reading"],
@@ -254,7 +254,7 @@ const seed = [
     "Alex",
     34,
     "nonbinary",
-    "New York",
+    "Astana",
     "life-partner",
     "Quiet confidence, loud laughter. I love cooking for people and building a sense of home.",
     ["cooking", "art", "film"],
@@ -269,7 +269,7 @@ const seed = [
     "James",
     44,
     "man",
-    "New York",
+    "Astana",
     "long-term",
     "Photographer and weekend sailor. Hoping to meet someone with their own passions and a generous heart.",
     ["photography", "sailing", "reading"],
@@ -313,10 +313,10 @@ export function sampleProfile(): Profile {
     name: "Jamie",
     age: 32,
     gender: "man",
-    city: "New York",
+    city: "Astana",
     intent: "long-term",
-    bio: "Curious by nature. Happiest on a hiking trail, trying a new recipe, or getting lost in an art museum. Looking for a kind partner to build something lasting.",
-    interests: ["hiking", "cooking", "art", "reading"],
+    bio: "Curious by nature. Happiest on a hiking trail, at a live concert, over a good coffee, or getting lost in an art museum. Looking for a kind partner to build something lasting.",
+    interests: ["hiking", "music", "coffee", "cooking", "art"],
     values: ["kindness", "curiosity", "family"],
     attributes: {
       children: "yes",
@@ -341,14 +341,15 @@ export function sampleProfile(): Profile {
   };
 }
 export const starterMessages = [
-  "I'm Jamie, 32, a man living in New York. I'm interested in women and nonbinary people ages 27 to 36 nearby, and I want a long-term relationship.",
-  "I love hiking, cooking, art, and reading. Kindness, curiosity, and family matter to me. I want children, don't smoke, drink socially, and enjoy an active lifestyle. I need a partner who doesn't smoke and wants children too.",
+  "I'm Jamie, 32, a man living in Astana. I'm interested in women and nonbinary people ages 27 to 36 nearby, and I want a long-term relationship.",
+  "I love hiking, live music, coffee, cooking, and art. Kindness, curiosity, and family matter to me. I want children, don't smoke, drink socially, and enjoy an active lifestyle. I need a partner who doesn't smoke and wants children too.",
 ];
 
 // ---------- Phase 2: fictional availability and date preferences ----------
 // General weekly patterns only. Cases are chosen deliberately for the demo:
 // overlap (Lena), no overlap (Maya), not shared (Sophie), not entered (Jules),
-// not open to meeting soon (Nora), and a different time zone (Ben, Chicago).
+// not open to meeting soon (Nora), and a different time zone (Ben, who keeps
+// Moscow time). Everyone else uses Kazakhstan time (Asia/Almaty, UTC+5).
 type Pattern = Partial<Record<Weekday, TimeWindow[]>>;
 const fictionalPlanning = (
   pattern: Pattern | null,
@@ -363,7 +364,7 @@ const fictionalPlanning = (
 ): Planning => ({
   availability: pattern
     ? {
-        timeZone: options.timeZone ?? "America/New_York",
+        timeZone: options.timeZone ?? "Asia/Almaty",
         slots: slotsFromGrid(pattern),
         openToMeetingSoon: options.openSoon ?? true,
         preference: options.preference ?? "either",
@@ -390,8 +391,8 @@ export const demoPlanning: Record<string, Planning> = {
     },
     {
       preference: "weekend",
-      budget: "low",
-      activities: ["walk", "museum", "coffee"],
+      budget: "moderate",
+      activities: ["walk", "cultural-event", "coffee", "museum"],
     },
   ),
   maya: fictionalPlanning(
@@ -419,7 +420,7 @@ export const demoPlanning: Record<string, Planning> = {
   ),
   ben: fictionalPlanning(
     { sat: ["afternoon", "evening"] },
-    { timeZone: "America/Chicago", activities: ["sport"] },
+    { timeZone: "Europe/Moscow", activities: ["sport"] },
   ),
   ...Object.fromEntries(
     [
@@ -450,13 +451,13 @@ export function samplePlanning(): Planning {
     {
       wed: ["evening"],
       sat: ["morning", "afternoon"],
-      sun: ["afternoon"],
+      sun: ["afternoon", "evening"],
     },
     {
       share: false,
       preference: "weekend",
       budget: "moderate",
-      activities: ["walk", "museum", "restaurant"],
+      activities: ["walk", "cultural-event", "coffee", "restaurant"],
     },
   );
 }

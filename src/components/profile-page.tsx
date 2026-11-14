@@ -5,6 +5,7 @@ import { Trash2, Check, ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 import { AppShell, NoProfile } from "./app-shell";
 import { ProfileEditor } from "./profile-editor";
+import { InstagramField } from "./instagram-field";
 import { Button } from "./ui/button";
 import { Modal } from "./modal";
 import { deleteDemo, dispatchDemo, useDemo } from "@/lib/demo-store";
@@ -48,6 +49,10 @@ export function ProfilePage() {
               }}
             />
           </div>
+          <InstagramField
+            value={state.social.instagram}
+            onSave={(instagram) => dispatchDemo({ type: "social", instagram })}
+          />
           <section className="data-controls">
             <div>
               <h3>Your data, your choice.</h3>

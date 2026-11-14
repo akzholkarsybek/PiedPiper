@@ -14,7 +14,9 @@ import {
   availabilitySchema,
   dateCategories,
   datePreferencesSchema,
+  venueRefSchema,
 } from "@/lib/planning";
+import { instagramSchema } from "@/lib/social";
 
 export const dynamic = "force-dynamic";
 function check(error: unknown) {
@@ -42,9 +44,13 @@ export async function GET() {
     );
     // Phase 2 (requires 002_phase2.sql). RLS returns only your own planning row
     // plus rows that mutual, unblocked matches chose to share.
-    const [planning, proposals] = await Promise.all([
+    const [planning, proposals, social] = await Promise.all([
       db.from("member_planning").select("*"),
       db.from("date_proposals").select("*").order("created_at").limit(200),
+      // Phase 2.2 (003): your own row plus usernames others chose to show.
+      db
+        .from("member_social")
+        .select("owner_id,instagram_handle,instagram_visible"),
     ]);
     const self = profiles.data?.find((p) => p.id === user.id);
     const profile = self
@@ -72,6 +78,7 @@ export async function GET() {
         questions: questions.data,
         planning: planning.error ? [] : planning.data,
         proposals: proposals.error ? [] : proposals.data,
+        social: social.error ? [] : social.data,
       },
       { headers: { "Cache-Control": "private, no-store" } },
     );
@@ -125,6 +132,12 @@ const actionSchema = z.discriminatedUnion("type", [
     title: z.string().trim().min(1).max(100),
     start: z.iso.datetime(),
     end: z.iso.datetime(),
+    /** Optional verified place/event reference (requires 003_phase2_2.sql). */
+    venue: venueRefSchema.optional(),
+  }),
+  z.object({
+    type: z.literal("social"),
+    instagram: instagramSchema.nullable(),
   }),
   z.object({
     type: z.literal("proposal-response"),
@@ -278,7 +291,20 @@ export async function POST(req: NextRequest) {
         title: action.title,
         starts_at: action.start,
         ends_at: action.end,
+        ...(action.venue ? { venue: action.venue } : {}),
       });
+      check(error);
+    } else if (action.type === "social") {
+      // Stored outside profiles.data so a hidden username is never readable
+      // by others (RLS in 003_phase2_2.sql). Removing deletes the row.
+      const { error } = action.instagram
+        ? await db.from("member_social").upsert({
+            owner_id: user.id,
+            instagram_handle: action.instagram.handle,
+            instagram_visible: action.instagram.visibleToMatches,
+            updated_at: new Date().toISOString(),
+          })
+        : await db.from("member_social").delete().eq("owner_id", user.id);
       check(error);
     } else if (action.type === "proposal-response") {
       const { error } = await db.rpc("respond_date_proposal", {

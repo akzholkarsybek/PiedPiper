@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { AIError } from "./gemini";
 import { ZodError } from "zod";
 const buckets = new Map<string, { count: number; expires: number }>();
-export async function guardedBody(req: NextRequest) {
+export async function guardedBody(req: NextRequest, maxBytes = 48000) {
   const origin = req.headers.get("origin");
   if (origin && origin !== req.nextUrl.origin)
     throw new AIError(
@@ -35,7 +35,7 @@ export async function guardedBody(req: NextRequest) {
       "Please pause before making more AI requests. The predefined demonstration is still available.",
       429,
     );
-  if (Number(req.headers.get("content-length")) > 48000)
+  if (Number(req.headers.get("content-length")) > maxBytes)
     throw new AIError(
       "TOO_LARGE",
       "This conversation is too long. Please start a new interview.",
@@ -51,7 +51,7 @@ export async function guardedBody(req: NextRequest) {
     const { done, value } = await reader.read();
     if (done) break;
     size += value.byteLength;
-    if (size > 48000) {
+    if (size > maxBytes) {
       await reader.cancel();
       throw new AIError("TOO_LARGE", "This conversation is too long.", 413);
     }

@@ -10,6 +10,7 @@ import {
   Footprints,
   Landmark,
   LoaderCircle,
+  MapPin,
   ShieldCheck,
   Sparkles,
   Ticket,
@@ -19,6 +20,7 @@ import {
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { AvailabilityEditor } from "./availability-editor";
+import { DateDiscovery } from "./date-discovery";
 import { dispatchDemo, GUEST_ID, type DemoState } from "@/lib/demo-store";
 import { samplePlanning } from "@/lib/fixtures";
 import type { Profile } from "@/lib/profile";
@@ -59,10 +61,12 @@ export function DatePlanner({
   state,
   profile,
   peer,
+  initialKind,
 }: {
   state: DemoState;
   profile: Profile;
   peer: Profile;
+  initialKind?: string;
 }) {
   // A stable reference instant keeps the computed windows steady while open.
   const [from] = useState(() => {
@@ -164,9 +168,9 @@ export function DatePlanner({
           Your first date, <em>made easier.</em>
         </h2>
         <p>
-          Your matchmakers compare general availability and suggest activity
-          types. Nothing is booked, and nothing is confirmed until you both say
-          yes.
+          Your matchmakers compare general availability, then suggest real,
+          verified places and events. Nothing is booked, and nothing is
+          confirmed until you both say yes.
         </p>
       </div>
       {info && (
@@ -404,7 +408,14 @@ export function DatePlanner({
           )}
         </div>
       </div>
-      <div className="proposal-panel">
+      <DateDiscovery
+        state={state}
+        profile={profile}
+        peer={peer}
+        from={from}
+        initialKind={initialKind}
+      />
+      <div className="proposal-panel" id="proposals">
         <h3>
           <CalendarCheck size={17} /> Propose a plan
         </h3>
@@ -444,13 +455,47 @@ export function DatePlanner({
                 <div>
                   <strong>{p.activity.title}</strong>
                   <span>{formatWindow(p, tz)}</span>
+                  {p.venue && (
+                    <span className="proposal-venue">
+                      <MapPin size={12} />{" "}
+                      {p.venue.address ?? "Location on map"} · {p.venue.source}
+                      {p.venue.fixedTime && " · scheduled event time"}
+                      {p.venue.mapUrl && (
+                        <>
+                          {" · "}
+                          <a
+                            href={p.venue.mapUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            Open location
+                          </a>
+                        </>
+                      )}
+                      {p.venue.url && (
+                        <>
+                          {" · "}
+                          <a
+                            href={p.venue.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            {p.venue.kind === "event"
+                              ? "Ticketon page"
+                              : "Website"}
+                          </a>
+                        </>
+                      )}
+                    </span>
+                  )}
                   <span className={`proposal-status ${p.status}`}>
                     {proposalStatusLabel(p)}
                   </span>
                   {p.status === "accepted" && (
                     <small>
-                      Nothing has been booked. Choose a public place together
-                      and let a friend know your plans.
+                      {p.venue?.kind === "event"
+                        ? "Nothing has been booked or purchased. Get tickets yourselves on the official Ticketon page, and let a friend know your plans."
+                        : "Nothing has been booked. Check opening hours before you go, and let a friend know your plans."}
                     </small>
                   )}
                 </div>

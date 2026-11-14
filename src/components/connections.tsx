@@ -18,7 +18,14 @@ import { SafetyModal } from "./discover";
 import { DatePlanner } from "./date-planner";
 import { dispatchDemo, matched, useDemo } from "@/lib/demo-store";
 import { formatWindow, proposalStatusLabel } from "@/lib/planning";
-export function Connections({ initialId }: { initialId?: string }) {
+export function Connections({
+  initialId,
+  initialKind,
+}: {
+  initialId?: string;
+  /** Activity group chosen from the matchmakers' shared activities. */
+  initialKind?: string;
+}) {
   const state = useDemo(),
     [selected, setSelected] = useState(initialId || ""),
     [text, setText] = useState(""),
@@ -219,6 +226,7 @@ export function Connections({ initialId }: { initialId?: string }) {
       )}
       {peer && state.profile && (
         <DatePlanner
+          initialKind={initialKind}
           key={peer.id}
           state={state}
           profile={state.profile}

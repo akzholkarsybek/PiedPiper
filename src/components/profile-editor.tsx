@@ -137,7 +137,7 @@ export function ProfileEditor({
             <input
               name="city"
               defaultValue={profile.city}
-              placeholder="e.g. New York"
+              placeholder="e.g. Astana"
               maxLength={100}
               required
             />
