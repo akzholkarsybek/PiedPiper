@@ -16,9 +16,32 @@ Verdict = Dict[str, Any]
 
 DATE_TURNS = int(os.getenv("DATE_TURNS") or 10)  # total messages (5 each)
 
+# Where the date happens. Keep ids in sync with src/lib/venues.ts.
+VENUES: Dict[str, str] = {
+    "cafe": "a cozy cafe, sitting at a small table with coffee",
+    "hiking": "an easy hiking trail just outside the city, walking side by side with some great views",
+    "karaoke": "a karaoke bar with a private room, taking turns picking songs",
+    "museum": "a modern art museum, walking slowly between the exhibits",
+    "dinner": "a nice restaurant for dinner, looking at the menu together",
+    "skating": "an outdoor ice-skating rink in the evening, with hot drinks at the side",
+}
+DEFAULT_VENUE = "cafe"
+
+
+def venue_scene(venue: str) -> str:
+    return VENUES.get(venue) or VENUES[DEFAULT_VENUE]
+
 # ---------------------------------------------------------------------------
 # 1. The agent persona prompt
 # ---------------------------------------------------------------------------
+
+
+_INTENT_TEXT = {
+    "serious": "a serious, long-term relationship",
+    "casual": "something casual, nothing serious right now",
+    # NOT "an open relationship": it means flexible about serious vs casual.
+    "open": "open to either serious or casual, seeing where it goes (monogamous; this is NOT about open relationships)",
+}
 
 
 def describe(p: Profile, include_private: bool) -> str:
@@ -27,7 +50,7 @@ def describe(p: Profile, include_private: bool) -> str:
         f"Name: {p['name']}, {p['age']}, {p['gender']}, lives in {p['city']}",
         f"Job: {p['occupation']}",
         f"Bio: {p['bio']}",
-        f"Looking for: {p['intent']} relationship",
+        f"Looking for: {_INTENT_TEXT.get(p['intent'], p['intent'])}",
         f"Values: {', '.join(p['values'])}",
         f"Interests: {', '.join(p['interests'])}",
         f"Dealbreakers: {', '.join(p['dealbreakers']) or 'none stated'}",
@@ -37,7 +60,7 @@ def describe(p: Profile, include_private: bool) -> str:
     return "\n".join(x for x in lines if x)
 
 
-def agent_system(me: Profile, other: Profile, turn_no: int, nudges: List[str]) -> str:
+def agent_system(me: Profile, other: Profile, turn_no: int, nudges: List[str], venue: str = DEFAULT_VENUE) -> str:
     is_last = turn_no >= DATE_TURNS - 1
     money_cue = (
         "\n- If money hasn't come up yet, steer there NOW in a natural way (splitting the bill, a recent splurge, what you're saving for, how you feel about debt)."
@@ -57,6 +80,9 @@ def agent_system(me: Profile, other: Profile, turn_no: int, nudges: List[str]) -
         else ""
     )
     return f"""You are playing {me['name']} on a first date with {other['name']}. (Technically you're {me['name']}'s AI stand-in and they're {other['name']}'s, but never mention agents, screening, profiles or "setting this up". Just BE {me['name']}: their humor, opinions, energy and flaws.)
+
+WHERE YOU ARE
+The date is at {venue_scene(venue)}. Now and then, react to the place in a natural way (what you see, do, eat or hear there), but the conversation is still about getting to know each other.
 
 WHO YOU REPRESENT
 {describe(me, True)}
@@ -92,7 +118,9 @@ RULES
 # ---------------------------------------------------------------------------
 
 
-async def agent_turn(me: Profile, other: Profile, my_side: str, transcript: List[Turn], nudges: List[str]) -> str:
+async def agent_turn(
+    me: Profile, other: Profile, my_side: str, transcript: List[Turn], nudges: List[str], venue: str = DEFAULT_VENUE
+) -> str:
     # My messages = "model", their messages = "user". Gemini history must start with "user".
     history = [{"role": "model" if t["speaker"] == my_side else "user", "text": t["text"]} for t in transcript]
     if not history or history[0]["role"] == "model":
@@ -100,13 +128,13 @@ async def agent_turn(me: Profile, other: Profile, my_side: str, transcript: List
             0,
             {
                 "role": "user",
-                "text": f"[The date begins at a cozy cafe. You arrived first. Say a simple, friendly hi to {other['name']} and mention one thing about them you're curious about.]",
+                "text": f"[The date begins at {venue_scene(venue)}. You arrived first. Say a simple, friendly hi to {other['name']} and mention one thing about them you're curious about.]",
             },
         )
     if history[-1]["role"] == "model":
         # Should not happen with strict alternation, but keep the API happy.
         history.append({"role": "user", "text": "[continue]"})
-    text = await llm.chat(agent_system(me, other, len(transcript), nudges), history, 1.0)
+    text = await llm.chat(agent_system(me, other, len(transcript), nudges, venue), history, 1.0)
     text = re.sub(r"^\s*\w+:\s*", "", text, count=1, flags=re.ASCII)
     return re.sub(r"^[\"']|[\"']$", "", text).strip()
 
@@ -214,26 +242,93 @@ def _mock_verdict(me: Profile, other: Profile) -> Verdict:
 # ---------------------------------------------------------------------------
 
 
+VIBE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "score": {"type": "integer", "minimum": 0, "maximum": 100, "description": "Chemistry right now"},
+        "label": {"type": "string", "description": "1-2 lowercase words, e.g. awkward, warming up, flirty, on fire, tense, polite"},
+    },
+    "required": ["score", "label"],
+}
+
+
+async def vibe(a: Profile, b: Profile, transcript: List[Turn], prev: int) -> Dict[str, Any]:
+    """A neutral observer rates the chemistry right after the latest message (for the live meter)."""
+    system = """You watch a first date and rate the CHEMISTRY between the two people right now, 0-100.
+Be a strict, realistic judge, like a friend watching from the next table:
+- 40-55: polite small talk, nothing special yet. Most dates start here.
+- 56-70: going well: real laughs, shared interests, playful teasing.
+- 71-85: clearly clicking: both open up, flirt, and build on each other's jokes.
+- 86+: rare. Only for an obviously special connection. Being friendly and agreeing is NOT enough.
+Go DOWN for awkward moments, flat or generic answers, interview-style questions, disagreements on important things, dodged questions, dealbreakers.
+A polite goodbye or "I had a good time" does not raise the score.
+The latest message matters most. Usually move 2-8 points from the previous score (up or down); a pleasant but ordinary message keeps it about the same. Move more only if something big happens."""
+    prompt = (
+        f"PREVIOUS SCORE: {prev}\n\nDATE SO FAR\n{transcript_text(a, b, transcript)}\n\n"
+        "Rate the chemistry now, with a 1-2 word label."
+    )
+
+    def mock() -> Dict[str, Any]:
+        n = sum(ord(c) for c in transcript[-1]["text"])
+        return {"score": max(0, min(100, prev + (n % 21) - 8)), "label": "warming up"}
+
+    v = await llm.json(system, prompt, VIBE_SCHEMA, mock, 0.2)
+    v = v if isinstance(v, dict) else {}
+    return {"score": _clamp(v.get("score", prev)), "label": str(v.get("label") or "")[:24].lower()}
+
+
 async def run_date(
     a: Profile,
     b: Profile,
     take_nudges: Callable[[str], Awaitable[List[str]]],
     on_turn: Callable[[List[Turn]], Awaitable[None]],
+    venue: str = DEFAULT_VENUE,
 ) -> AsyncIterator[Dict[str, Any]]:
-    """take_nudges(side): new coach whispers for that side. on_turn(transcript): persist progress."""
+    """take_nudges(side): new coach whispers for that side. on_turn(transcript): persist progress.
+    After each turn a chemistry rating runs in the background (in parallel with the next turn)
+    and is streamed as a "vibe" event once ready."""
     transcript: List[Turn] = []
+    pending: List[Tuple[int, "asyncio.Task[Dict[str, Any]]"]] = []
+    last_score = 50
+
+    def ready_vibes(wait_all: bool = False) -> List[Tuple[int, "asyncio.Task[Dict[str, Any]]"]]:
+        out = []
+        while pending and (wait_all or pending[0][1].done()):
+            out.append(pending.pop(0))
+        return out
+
+    async def vibe_events(items: List[Tuple[int, "asyncio.Task[Dict[str, Any]]"]]) -> List[Dict[str, Any]]:
+        nonlocal last_score
+        evs = []
+        for idx, task in items:
+            try:
+                v = await task
+            except Exception:  # noqa: BLE001 - the meter is a nice-to-have; never break the date
+                continue
+            last_score = v["score"]
+            transcript[idx]["vibe"] = v
+            evs.append({"type": "vibe", "index": idx, "vibe": v})
+        return evs
+
     for i in range(DATE_TURNS):
         side = "a" if i % 2 == 0 else "b"
         me, other = (a, b) if side == "a" else (b, a)
         yield {"type": "typing", "speaker": side}
         nudges = await take_nudges(side)
-        text = await agent_turn(me, other, side, transcript, nudges)
+        text = await agent_turn(me, other, side, transcript, nudges, venue)
         turn: Turn = {"speaker": side, "text": text}
         if nudges:
             turn["nudged"] = True
         transcript.append(turn)
+        for ev in await vibe_events(ready_vibes()):
+            yield ev
         await on_turn(transcript)
         yield {"type": "turn", "turn": turn, "index": i}
+        pending.append((i, asyncio.create_task(vibe(a, b, list(transcript), last_score))))
+
+    for ev in await vibe_events(ready_vibes(wait_all=True)):
+        yield ev
+    await on_turn(transcript)
 
 
 async def both_verdicts(a: Profile, b: Profile, transcript: List[Turn]) -> Tuple[Verdict, Verdict]:
@@ -265,3 +360,58 @@ Reference something specific from the agent date. One playful, one sincere, one 
         0.9,
     )
     return [str(o) for o in (res.get("openers") or [])][:3]
+
+
+# ---------------------------------------------------------------------------
+# 6. After a match: ideas for the real first date
+# ---------------------------------------------------------------------------
+
+IDEAS_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "ideas": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "emoji": {"type": "string", "description": "One emoji for the idea"},
+                    "title": {"type": "string", "description": "Short name, max 6 words"},
+                    "plan": {"type": "string", "description": "What you'd actually do, 1-2 simple sentences"},
+                    "why": {"type": "string", "description": "Why it fits these two, citing the agent date or profiles, 1 sentence"},
+                    "cost": {"type": "string", "enum": ["free", "$", "$$", "$$$"]},
+                },
+                "required": ["emoji", "title", "plan", "why", "cost"],
+            },
+        }
+    },
+    "required": ["ideas"],
+}
+
+
+async def date_ideas(a: Profile, b: Profile, transcript: List[Turn]) -> List[Dict[str, str]]:
+    """Three concrete ideas for the first REAL date, shared by both people in the match."""
+    system = f"""{a['name']} and {b['name']} matched after their AI agents went on a date. Suggest 3 different ideas for their first REAL date.
+- Base each idea on things they both like or joked about on the agent date. Be specific to these two people.
+- Keep it realistic for where they live ({a['city']} / {b['city']}). Describe the kind of place; don't invent business names. If they live in different cities, make at least one idea work online or as a meet-in-the-middle plan.
+- Respect both money styles: one idea free or very cheap, one mid-priced, and at most one that costs more.
+- Never use anything from private notes. Simple, plain English."""
+    prompt = f"{a['name'].upper()}\n{describe(a, False)}\n\n{b['name'].upper()}\n{describe(b, False)}\n\nAGENT DATE\n{transcript_text(a, b, transcript)}"
+    res = await llm.json(
+        system,
+        prompt,
+        IDEAS_SCHEMA,
+        lambda: {
+            "ideas": [
+                {"emoji": "☕", "title": "[MOCK] Coffee walk", "plan": "Grab coffee and walk by the river.", "why": "You both like coffee.", "cost": "$"},
+                {"emoji": "🥾", "title": "[MOCK] Easy hike", "plan": "A short morning hike with snacks.", "why": "You both like the outdoors.", "cost": "free"},
+                {"emoji": "🍜", "title": "[MOCK] Cook together", "plan": "Pick a recipe and cook it together.", "why": "You joked about cooking.", "cost": "$$"},
+            ]
+        },
+        0.9,
+    )
+    out = []
+    for i in (res.get("ideas") or [])[:3] if isinstance(res, dict) else []:
+        if isinstance(i, dict) and i.get("title") and i.get("plan"):
+            cost = i.get("cost") if i.get("cost") in ("free", "$", "$$", "$$$") else "$"
+            out.append({"emoji": str(i.get("emoji") or "✨")[:4], "title": str(i["title"]), "plan": str(i["plan"]), "why": str(i.get("why") or ""), "cost": cost})
+    return out

@@ -26,6 +26,7 @@ def view_date(d: Dict[str, Any], a: Dict[str, Any], b: Dict[str, Any], viewer_id
     return {
         "id": d["id"],
         "status": d["status"],
+        "venue": d.get("venue") or "cafe",
         "transcript": d["transcript"],
         "a": public_profile(a),
         "b": public_profile(b),

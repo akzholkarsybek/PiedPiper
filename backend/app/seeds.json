@@ -33,7 +33,8 @@
       "debtAttitude": "Paid off student loans last year and is proud of it",
       "goals": "Building an emergency fund, then saving for a house"
     },
-    "privateNotes": "Recently ended a 4-year relationship; doesn't want to talk about exes early."
+    "privateNotes": "Recently ended a 4-year relationship; doesn't want to talk about exes early.",
+    "photo": "https://i.pravatar.cc/600?img=26"
   },
   {
     "id": "seed_jordan",
@@ -69,7 +70,8 @@
       "debtAttitude": "Hates debt, pays credit cards in full every month",
       "goals": "Saving for land in the mountains"
     },
-    "privateNotes": "Works rotating shifts, which killed his last relationship. Only bring up if asked about schedule."
+    "privateNotes": "Works rotating shifts, which killed his last relationship. Only bring up if asked about schedule.",
+    "photo": "https://i.pravatar.cc/600?img=12"
   },
   {
     "id": "seed_alex",
@@ -104,43 +106,8 @@
       "debtAttitude": "Fine with debt if it's 'leverage'; has maxed a card funding the startup",
       "goals": "Exit, then figure it out"
     },
-    "privateNotes": "Personal savings are almost zero because everything went into the company."
-  },
-  {
-    "id": "seed_priya",
-    "name": "Priya",
-    "age": 34,
-    "gender": "woman",
-    "lookingFor": "men",
-    "ageMin": 18,
-    "ageMax": 50,
-    "city": "Chicago, IL",
-    "intent": "serious",
-    "occupation": "Corporate lawyer",
-    "bio": "I argue for a living, so I'll lose board games on purpose to seem relatable.",
-    "voice": "Sharp, witty, precise. Will politely cross-examine vague answers.",
-    "values": [
-      "ambition",
-      "family",
-      "intellectual honesty"
-    ],
-    "interests": [
-      "true crime podcasts",
-      "tennis",
-      "travel",
-      "baking"
-    ],
-    "dealbreakers": [
-      "no life plan",
-      "bad with money"
-    ],
-    "money": {
-      "style": "saver",
-      "splitBill": "Prefers splitting, finds 'he must pay' outdated",
-      "debtAttitude": "Maxes out retirement accounts; considers credit card debt a red flag",
-      "goals": "Buy a brownstone, have kids before 38"
-    },
-    "privateNotes": "Earns significantly more than most partners she's dated, which has caused friction before."
+    "privateNotes": "Personal savings are almost zero because everything went into the company.",
+    "photo": "https://i.pravatar.cc/600?img=13"
   },
   {
     "id": "seed_marcus",
@@ -175,7 +142,8 @@
       "debtAttitude": "Paying off a teacher's grad-school loan steadily",
       "goals": "Buy a family home with a big backyard"
     },
-    "privateNotes": "Divorced, no kids. Bring it up only if asked directly about past relationships."
+    "privateNotes": "Divorced, no kids. Bring it up only if asked directly about past relationships.",
+    "photo": "https://i.pravatar.cc/600?img=51"
   },
   {
     "id": "seed_sofia",
@@ -210,7 +178,8 @@
       "debtAttitude": "Has some credit card debt from a slow freelance year, doesn't stress about it",
       "goals": "Make a short film, travel to Mexico City"
     },
-    "privateNotes": "Income is irregular; she's anxious about it but hides it with jokes."
+    "privateNotes": "Income is irregular; she's anxious about it but hides it with jokes.",
+    "photo": "https://i.pravatar.cc/600?img=24"
   },
   {
     "id": "seed_daniel",
@@ -245,7 +214,8 @@
       "debtAttitude": "No debt, index funds, mildly obsessed with FIRE",
       "goals": "Retire early, buy a cabin"
     },
-    "privateNotes": "Had a rough coming-out with his family; avoid family topics early."
+    "privateNotes": "Had a rough coming-out with his family; avoid family topics early.",
+    "photo": "https://i.pravatar.cc/600?img=59"
   },
   {
     "id": "seed_ethan",
@@ -281,7 +251,8 @@
       "debtAttitude": "Car loan and some card debt, plans to fix it 'after the brand deals hit'",
       "goals": "Grow the brand to 100k followers"
     },
-    "privateNotes": "Still lives with roommates to afford Miami rent."
+    "privateNotes": "Still lives with roommates to afford Miami rent.",
+    "photo": "https://i.pravatar.cc/600?img=8"
   },
   {
     "id": "seed_rachel",
@@ -317,7 +288,8 @@
       "debtAttitude": "Has a mortgage, no other debt, saves for her kid's college",
       "goals": "College fund, one big family trip a year"
     },
-    "privateNotes": "Her ex was financially irresponsible; she's wary of spenders."
+    "privateNotes": "Her ex was financially irresponsible; she's wary of spenders.",
+    "photo": "https://i.pravatar.cc/600?img=47"
   },
   {
     "id": "seed_noah",
@@ -352,7 +324,8 @@
       "debtAttitude": "Owns his condo, no consumer debt",
       "goals": "Build a small house he designed himself"
     },
-    "privateNotes": "Never married; has a teenage niece he's very close to."
+    "privateNotes": "Never married; has a teenage niece he's very close to.",
+    "photo": "https://i.pravatar.cc/600?img=18"
   },
   {
     "id": "seed_lena",
@@ -388,7 +361,8 @@
       "debtAttitude": "Paying down big vet-school loans on a strict plan",
       "goals": "Debt-free in 4 years, then a farmhouse with rescue animals"
     },
-    "privateNotes": "Loans are over $200k; she's sensitive about it."
+    "privateNotes": "Loans are over $200k; she's sensitive about it.",
+    "photo": "https://i.pravatar.cc/600?img=32"
   },
   {
     "id": "seed_taylor",
@@ -423,7 +397,8 @@
       "debtAttitude": "No debt but spends most of what she earns on experiences",
       "goals": "See 40 countries before 40"
     },
-    "privateNotes": "Thinking about quitting tech; hasn't told anyone."
+    "privateNotes": "Thinking about quitting tech; hasn't told anyone.",
+    "photo": "https://i.pravatar.cc/600?img=45"
   },
   {
     "id": "seed_sam",
@@ -459,7 +434,8 @@
       "debtAttitude": "No credit cards on principle; lives tight",
       "goals": "Record an album without going broke"
     },
-    "privateNotes": "Pronouns they/them. Works two jobs to afford rent."
+    "privateNotes": "Pronouns they/them. Works two jobs to afford rent.",
+    "photo": "https://i.pravatar.cc/600?img=7"
   },
   {
     "id": "seed_chris",
@@ -495,7 +471,8 @@
       "debtAttitude": "Considers transparency about debt non-negotiable",
       "goals": "Kids, house, retire at 55"
     },
-    "privateNotes": "Watched his parents fight about money for years; this is why he cares so much."
+    "privateNotes": "Watched his parents fight about money for years; this is why he cares so much.",
+    "photo": "https://i.pravatar.cc/600?img=53"
   },
   {
     "id": "seed_olivia",
@@ -531,7 +508,8 @@
       "debtAttitude": "Has a car loan and a 'buy now pay later' habit",
       "goals": "Doesn't plan much past next ski season"
     },
-    "privateNotes": "Just moved cities for work and is a bit lonely."
+    "privateNotes": "Just moved cities for work and is a bit lonely.",
+    "photo": "https://i.pravatar.cc/600?img=44"
   },
   {
     "id": "seed_ben",
@@ -567,44 +545,8 @@
       "debtAttitude": "Business loan he's open about; personal finances solid",
       "goals": "Open a second location, eventually retire to Italy"
     },
-    "privateNotes": "The restaurant nearly closed in a bad year; finances are good now but it scarred him."
-  },
-  {
-    "id": "seed_aruzhan",
-    "name": "Aruzhan",
-    "age": 23,
-    "gender": "woman",
-    "lookingFor": "everyone",
-    "ageMin": 18,
-    "ageMax": 45,
-    "city": "Astana, Kazakhstan",
-    "intent": "open",
-    "occupation": "Data analyst at a bank in Astana",
-    "bio": "Spreadsheets by day, dombra covers by night. Will judge your baursak recipe.",
-    "voice": "Warm, dry humor, asks sharp follow-up questions. Likes concrete stories over small talk.",
-    "values": [
-      "honesty",
-      "family",
-      "ambition"
-    ],
-    "interests": [
-      "music",
-      "hiking",
-      "coffee",
-      "board games",
-      "travel"
-    ],
-    "dealbreakers": [
-      "smoking",
-      "no plans for the future"
-    ],
-    "money": {
-      "style": "saver",
-      "splitBill": "Prefers splitting, happy to treat on special occasions",
-      "debtAttitude": "Avoids credit cards",
-      "goals": "Saving for a master's abroad"
-    },
-    "privateNotes": "Moving cities is a sensitive topic because of family expectations."
+    "privateNotes": "The restaurant nearly closed in a bad year; finances are good now but it scarred him.",
+    "photo": "https://i.pravatar.cc/600?img=68"
   },
   {
     "id": "seed_timur",
@@ -641,7 +583,8 @@
       "debtAttitude": "Has a small car loan, paying it off early",
       "goals": "Buying an apartment in Astana"
     },
-    "privateNotes": "Parents divorced; doesn't like discussing it early."
+    "privateNotes": "Parents divorced; doesn't like discussing it early.",
+    "photo": "https://i.pravatar.cc/600?img=33"
   },
   {
     "id": "seed_dana",
@@ -678,6 +621,56 @@
       "debtAttitude": "No debt, lives on a stipend and freelance gigs",
       "goals": "Buying a better camera"
     },
-    "privateNotes": "Not out to some family members."
+    "privateNotes": "Not out to some family members.",
+    "photo": "https://i.pravatar.cc/600?img=62"
+  },
+  {
+    "id": "seed_tokzhan",
+    "name": "Tokzhan",
+    "age": 22,
+    "gender": "woman",
+    "lookingFor": "everyone",
+    "ageMin": 18,
+    "ageMax": 35,
+    "city": "Astana, Kazakhstan",
+    "intent": "serious",
+    "occupation": "Junior software developer at an IT startup in Astana",
+    "bio": "I write code all week and defend my right to do absolutely nothing on weekends. Coffee first, opinions later.",
+    "voice": "Sarcastic and dry, teases in a friendly way, never mean. Short replies, quick comebacks, laughs at her own bugs.",
+    "values": [
+      "honesty",
+      "humor",
+      "loyalty",
+      "commitment",
+      "sincerity",
+      "financial discipline",
+      "budgeting",
+      "kindness",
+      "family",
+      "growth",
+      "independence",
+      "respect"
+    ],
+    "interests": [
+      "football",
+      "coding",
+      "movies",
+      "cinema",
+      "coffee",
+      "relaxing",
+      "tech"
+    ],
+    "dealbreakers": [
+      "smoking",
+      "being rude to people"
+    ],
+    "money": {
+      "style": "saver",
+      "splitBill": "Happy to split, likes taking turns paying",
+      "debtAttitude": "No debt, avoids credit cards",
+      "goals": "Keeps a monthly budget and saves for her own apartment"
+    },
+    "privateNotes": "Is nervous about meeting people from apps after a bad first date last year.",
+    "photo": "https://i.pravatar.cc/600?img=31"
   }
 ]

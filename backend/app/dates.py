@@ -15,8 +15,16 @@ def now_ms() -> int:
     return int(time.time() * 1000)
 
 
-async def create_date(a_id: str, b_id: str) -> DateRecord:
-    d = {"id": store.new_id("date"), "aId": a_id, "bId": b_id, "status": "pending", "transcript": [], "createdAt": now_ms()}
+async def create_date(a_id: str, b_id: str, venue: str = "cafe") -> DateRecord:
+    d = {
+        "id": store.new_id("date"),
+        "aId": a_id,
+        "bId": b_id,
+        "venue": venue,
+        "status": "pending",
+        "transcript": [],
+        "createdAt": now_ms(),
+    }
     await save_date(d)
     await store.sadd(f"user:{a_id}:dates", d["id"])
     await store.sadd(f"user:{b_id}:dates", d["id"])
@@ -52,6 +60,10 @@ async def create_match(d: DateRecord) -> Match:
     await store.sadd(f"user:{d['aId']}:matches", m["id"])
     await store.sadd(f"user:{d['bId']}:matches", m["id"])
     return m
+
+
+async def save_match(m: Match) -> None:
+    await store.set_json(f"match:{m['id']}", m)
 
 
 async def get_match(id: str) -> Optional[Match]:

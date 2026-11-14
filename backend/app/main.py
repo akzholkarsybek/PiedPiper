@@ -6,6 +6,7 @@ so the frontend talks to it unchanged (Next.js proxies /api/* here, see next.con
 from __future__ import annotations
 
 import os
+import re
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -111,6 +112,10 @@ async def create_profile(req: Request):
     }
     try:
         profile = await build_profile(inp)
+        photo = b.get("photo")
+        # Only a small, browser-resized image (data URL). Anything else is ignored, never stored.
+        if isinstance(photo, str) and re.fullmatch(r"data:image/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+", photo) and len(photo) <= 120_000:
+            profile["photo"] = photo
         await profiles.save_profile(profile)
         return {"profile": profile}
     except Exception:  # noqa: BLE001
@@ -150,6 +155,8 @@ async def profile_dates(id: str):
             {
                 "id": d["id"],
                 "status": d["status"],
+                "venue": d.get("venue") or "cafe",
+                "chemistry": next((t["vibe"]["score"] for t in reversed(d.get("transcript") or []) if t.get("vibe")), None),
                 "createdAt": d["createdAt"],
                 "other": profiles.public_profile(other) if other else None,
                 "myVerdict": mine,
@@ -178,11 +185,16 @@ async def create_date(req: Request):
     if a["isSeed"]:
         return err("Demo profiles can't start dates", 400)
 
+    venue = b.get("venue") if b.get("venue") in agents.VENUES else agents.DEFAULT_VENUE
+
     # Don't send the same pair on two dates.
     for d in await dates.list_dates_for(a_id):
         if {d["aId"], d["bId"]} == {a_id, b_id}:
+            if d["status"] in ("pending", "error") and d.get("venue") != venue:
+                d["venue"] = venue  # not started yet: use the newly picked place
+                await dates.save_date(d)
             return {"date": d, "existing": True}
-    return {"date": await dates.create_date(a_id, b_id)}
+    return {"date": await dates.create_date(a_id, b_id, venue)}
 
 
 @app.get("/api/dates/{id}")
@@ -229,6 +241,9 @@ async def redo_date(id: str, req: Request):
     if d["status"] == "running" and id in _running:
         return err("This date is still running", 409)
     d.update({"status": "pending", "transcript": [], "verdictA": None, "verdictB": None})
+    new_venue = (await body(req)).get("venue")
+    if new_venue in agents.VENUES:
+        d["venue"] = new_venue
     await dates.save_date(d)
     for side in ("a", "b"):
         await store.delete(f"nudges:{id}:{side}")
@@ -283,7 +298,7 @@ async def run_date(id: str, req: Request):
                 d["transcript"] = list(transcript)
                 await dates.save_date(d)
 
-            async for ev in agents.run_date(a, b, take_nudges, on_turn):
+            async for ev in agents.run_date(a, b, take_nudges, on_turn, d.get("venue") or agents.DEFAULT_VENUE):
                 send(ev)
 
             send({"type": "deliberating"})
@@ -367,10 +382,8 @@ async def post_message(id: str, req: Request):
     if e:
         return e
     me = viewer(req)
-    other = await profiles.get_profile(m["bId"] if m["aId"] == me else m["aId"])
-    if other and other["isSeed"]:
-        return err("This is a demo profile with no real person behind it. Invite a friend to try real chat.", 400)
-    text = str((await body(req)).get("text") or "").strip()
+    # Demo profiles can be messaged too (they just never reply), so the chat works after any match.
+    text = str((await body(req)).get("text") or "").strip()[:1000]
     if not text:
         return err("Empty message", 400)
     return {"message": await dates.add_message(id, me, text)}  # type: ignore[arg-type]
@@ -392,3 +405,28 @@ async def wingman(id: str, req: Request):
     except Exception:  # noqa: BLE001
         log.exception("wingman failed")
         return err("Wingman is unavailable right now.", 500)
+
+
+@app.post("/api/matches/{id}/ideas")
+async def match_ideas(id: str, req: Request):
+    """Ideas for the first real date. Generated once and saved, so both people see the same list.
+    Send {"refresh": true} to get new ones."""
+    m, e = await _authorize_match(req, id)
+    if e:
+        return e
+    if m.get("ideas") and not (await body(req)).get("refresh"):
+        return {"ideas": m["ideas"]}
+    d = await dates.get_date(m["dateId"])
+    a, b = await profiles.get_profile(m["aId"]), await profiles.get_profile(m["bId"])
+    if not d or not a or not b:
+        return err("Missing data", 404)
+    try:
+        ideas = await agents.date_ideas(a, b, d["transcript"])
+    except Exception:  # noqa: BLE001
+        log.exception("date ideas failed")
+        return err("Couldn't come up with ideas right now. Try again.", 500)
+    if not ideas:
+        return err("Couldn't come up with ideas right now. Try again.", 500)
+    m["ideas"] = ideas
+    await dates.save_match(m)
+    return {"ideas": ideas}
