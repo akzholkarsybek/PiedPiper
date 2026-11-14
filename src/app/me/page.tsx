@@ -271,6 +271,9 @@ export default function MePage() {
                   <div className="mt-1">{me.privateNotes}</div>
                 </div>
               )}
+              <Link href="/start?edit=1" className="btn btn-ghost w-full text-sm py-2.5">
+                <Sparkle size={15} /> Edit my info
+              </Link>
             </div>
           </div>
 

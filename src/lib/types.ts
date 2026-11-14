@@ -38,6 +38,8 @@ export interface Profile {
   privateNotes: string;
   /** Their type, in their own words. Only their own agent sees it (owner view only). */
   idealType?: string;
+  /** Their own onboarding answers, for editing (owner view only; missing on older profiles). */
+  answers?: Partial<Record<string, string>>;
   /** Photo URL (demo profiles) or small data: URL (uploaded at onboarding). Optional. */
   photo?: string | null;
   /** Demo profiles that ship with the app (no real human behind them) */
@@ -103,7 +105,7 @@ export interface ChatMessage {
   at: number;
 }
 
-export type PublicProfile = Omit<Profile, "privateNotes" | "idealType">;
+export type PublicProfile = Omit<Profile, "privateNotes" | "idealType" | "answers">;
 
 /** What one viewer is allowed to see of a date (see backend/app/view.py). */
 export interface DateView {

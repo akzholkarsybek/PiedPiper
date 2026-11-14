@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { api, setMyId } from "@/lib/client";
+import { api, getMyId, setMyId } from "@/lib/client";
 import type { Profile } from "@/lib/types";
 import { Avatar, Portrait, Tag } from "@/components/ui";
 import { VoiceTextarea } from "@/components/VoiceTextarea";
@@ -81,6 +81,31 @@ const STEPS = [
 ];
 const LAST = STEPS.length - 1;
 
+/** Prefills the form when editing. Uses the saved answers; older profiles fall back to their generated persona. */
+function formFromProfile(p: Profile): Form {
+  const a = p.answers ?? {};
+  const money = [p.money.splitBill, p.money.debtAttitude, p.money.goals].filter(Boolean).join(". ");
+  return {
+    name: p.name,
+    age: String(p.age),
+    gender: p.gender,
+    lookingFor: p.lookingFor,
+    ageMin: String(p.ageMin),
+    ageMax: String(p.ageMax),
+    city: p.city,
+    intent: p.intent,
+    occupation: p.occupation,
+    aboutMe: a.aboutMe ?? p.bio,
+    idealWeekend: a.idealWeekend ?? p.interests.join(", "),
+    humor: a.humor ?? p.voice,
+    moneyHabits: a.moneyHabits ?? money,
+    dealbreakers: a.dealbreakers ?? p.dealbreakers.join(", "),
+    keepPrivate: a.keepPrivate ?? p.privateNotes,
+    idealType: p.idealType ?? "",
+    photo: p.photo?.startsWith("data:") ? p.photo : "",
+  };
+}
+
 /** Fields the "say it all at once" step can fill (everything except the photo). */
 type Answers = Partial<Omit<Record<keyof Form, string | number>, "photo">>;
 
@@ -90,14 +115,32 @@ const DUMP_EXAMPLE =
 function StartInner() {
   const router = useRouter();
   const params = useSearchParams();
-  const inviteId = params.get("invite");
-  const [step, setStep] = useState(0);
+  const editing = params.get("edit") === "1";
+  const inviteId = editing ? null : params.get("invite");
+  const firstStep = editing ? 1 : 0; // editing starts at the form, not the "say it all at once" step
+  const [step, setStep] = useState(firstStep);
+  const [loading, setLoading] = useState(editing);
   const [f, setF] = useState<Form>(EMPTY);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [inviter, setInviter] = useState<Profile | null>(null);
   const [dump, setDump] = useState("");
   const [filled, setFilled] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!editing) return;
+    const id = getMyId();
+    if (!id) {
+      router.replace("/start");
+      return;
+    }
+    api<{ profile: Profile }>(`/api/profiles/${id}`)
+      .then((r) => {
+        setF(formFromProfile(r.profile));
+      })
+      .catch(() => setError("Couldn't load your profile. Try again."))
+      .finally(() => setLoading(false));
+  }, [editing, router]);
 
   useEffect(() => {
     if (!inviteId) return;
@@ -109,7 +152,7 @@ function StartInner() {
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setF((x) => ({ ...x, [k]: v }));
   // Until the person edits "Their age range" themselves, keep it centred on their own age
   // (a fixed 25-40 default silently hid everyone younger than 25).
-  const [rangeTouched, setRangeTouched] = useState(false);
+  const [rangeTouched, setRangeTouched] = useState(editing); // editing: keep their saved range
   function setAge(v: string) {
     const n = Number(v);
     setF((x) =>
@@ -156,10 +199,21 @@ function StartInner() {
   async function submit() {
     setBusy(true);
     setError(null);
+    const answers = { ...f, age: Number(f.age), ageMin: Number(f.ageMin), ageMax: Number(f.ageMax) };
+    if (editing) {
+      try {
+        await api<{ profile: Profile }>(`/api/profiles/${getMyId()}`, { method: "PUT", body: JSON.stringify(answers) });
+        router.push("/me");
+      } catch (e) {
+        setError((e as Error).message);
+        setBusy(false);
+      }
+      return;
+    }
     try {
       const { profile } = await api<{ profile: Profile }>("/api/profiles", {
         method: "POST",
-        body: JSON.stringify({ ...f, age: Number(f.age), ageMin: Number(f.ageMin), ageMax: Number(f.ageMax) }),
+        body: JSON.stringify(answers),
       });
       setMyId(profile.id);
       if (inviteId) {
@@ -190,6 +244,16 @@ function StartInner() {
           </div>
         )}
 
+        {editing && (
+          <div className="card p-4 mb-6 flex items-center gap-3 bg-gradient-to-r from-plum-soft to-paper rise">
+            <Sparkle size={20} className="text-plum shrink-0" />
+            <div className="min-w-0">
+              <div className="font-semibold">Editing your info</div>
+              <div className="text-sm text-muted">Change anything, then save. Your agent is rebuilt from your new answers; your dates and matches stay.</div>
+            </div>
+          </div>
+        )}
+
         {/* progress */}
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-2 text-sm text-muted">
@@ -207,6 +271,12 @@ function StartInner() {
           ))}
         </div>
 
+        {loading ? (
+          <div className="mt-8 space-y-4" aria-busy>
+            <div className="h-14 w-2/3 rounded-2xl bg-line animate-pulse" />
+            <div className="h-40 rounded-2xl bg-line animate-pulse" />
+          </div>
+        ) : (
         <div key={step} className="rise">
           <h1 className="display text-5xl sm:text-6xl mt-8 leading-none">{STEPS[step].title}</h1>
           <p className="text-muted mt-3">{STEPS[step].sub}</p>
@@ -383,10 +453,12 @@ function StartInner() {
           </div>
         </div>
 
+        )}
+
         {error && <p className="text-sm text-coral mt-5">{error}</p>}
 
         <div className="flex items-center justify-between gap-3 mt-10 pt-6 border-t border-line">
-          <button className="btn btn-ghost" disabled={step === 0 || busy} onClick={() => setStep((s) => s - 1)}>
+          <button className="btn btn-ghost" disabled={step === firstStep || busy || loading} onClick={() => setStep((s) => s - 1)}>
             <ArrowLeft size={16} /> Back
           </button>
           {step === 0 ? (
@@ -399,13 +471,20 @@ function StartInner() {
               </button>
             </div>
           ) : step < LAST ? (
-            <button className="btn btn-primary px-7" disabled={!stepValid[step]} onClick={() => setStep((s) => s + 1)}>
-              Continue <ArrowRight size={16} />
-            </button>
+            <div className="flex items-center gap-2">
+              {editing && (
+                <button className="btn btn-ghost" disabled={!stepValid.every(Boolean) || busy || loading} onClick={submit}>
+                  Save now
+                </button>
+              )}
+              <button className="btn btn-primary px-7" disabled={!stepValid[step] || loading} onClick={() => setStep((s) => s + 1)}>
+                Continue <ArrowRight size={16} />
+              </button>
+            </div>
           ) : (
             <button className="btn btn-grad px-7" disabled={!stepValid.every(Boolean) || busy} onClick={submit}>
               <Heart size={16} filled />
-              {inviteId ? "Create agent & start the date" : "Create my agent"}
+              {editing ? "Save changes" : inviteId ? "Create agent & start the date" : "Create my agent"}
             </button>
           )}
         </div>
@@ -419,7 +498,7 @@ function StartInner() {
         </p>
       </aside>
 
-      {busy && step === LAST && <TrainingOverlay name={f.name} />}
+      {busy && (step === LAST || editing) && <TrainingOverlay name={f.name} updating={editing} />}
     </div>
   );
 }
@@ -469,7 +548,7 @@ function PreviewCard({ f }: { f: Form }) {
   );
 }
 
-function TrainingOverlay({ name }: { name: string }) {
+function TrainingOverlay({ name, updating }: { name: string; updating?: boolean }) {
   return (
     <div className="fixed inset-0 z-50 glass flex items-center justify-center p-6 fade-in">
       <div className="text-center max-w-sm">
@@ -479,7 +558,9 @@ function TrainingOverlay({ name }: { name: string }) {
             <Heart size={44} filled />
           </div>
         </div>
-        <h2 className="display text-4xl mt-8">Training {name.trim() ? `${name.trim()}'s` : "your"} agent</h2>
+        <h2 className="display text-4xl mt-8">
+          {updating ? "Updating" : "Training"} {name.trim() ? `${name.trim()}'s` : "your"} agent
+        </h2>
         <p className="text-muted mt-2">Learning your voice, your values and your money style…</p>
       </div>
     </div>

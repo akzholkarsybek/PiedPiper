@@ -70,6 +70,8 @@ For money.style choose saver / balanced / spender from their money answer."""
         "privateNotes": g.get("privateNotes") or "",
         # Their own words about who they want. Only their own agent sees it (stripped from public views).
         "idealType": str(inp.get("idealType") or "").strip()[:400],
+        # The person's own answers, so they can edit them later. Owner-only (stripped from public views).
+        "answers": {k: v for k, v in inp.items() if k not in ("age", "ageMin", "ageMax")},
         "isSeed": False,
         "createdAt": now_ms(),
     }

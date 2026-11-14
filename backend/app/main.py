@@ -79,21 +79,23 @@ def _num(v: Any, default: float) -> float:
         return float("nan")
 
 
-@app.post("/api/profiles")
-async def create_profile(req: Request):
-    b = await body(req)
+_PHOTO_RE = re.compile(r"data:image/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+")
+
+
+def _parse_answers(b: Dict[str, Any]):
+    """Validates onboarding answers. Returns (answers, None) or (None, error response)."""
     if not str(b.get("name") or "").strip():
-        return err("Name is required", 400)
+        return None, err("Name is required", 400)
     if b.get("gender") not in GENDERS or b.get("lookingFor") not in LOOKING or b.get("intent") not in INTENTS:
-        return err("Invalid gender, preference or intent", 400)
+        return None, err("Invalid gender, preference or intent", 400)
     if _num(b.get("age"), float("nan")) < 18:
-        return err("You must be 18+", 400)
+        return None, err("You must be 18+", 400)
 
     def s(k: str, limit: Optional[int] = None) -> str:
         v = str(b.get(k) or "")
         return v[:limit] if limit else v
 
-    inp = {
+    return {
         "name": s("name"),
         "age": _num(b.get("age"), float("nan")),
         "gender": b["gender"],
@@ -110,18 +112,54 @@ async def create_profile(req: Request):
         "keepPrivate": s("keepPrivate", 400),
         "humor": s("humor", 300),
         "idealType": s("idealType", 400),
-    }
+    }, None
+
+
+def _valid_photo(photo: Any) -> bool:
+    """Only a small, browser-resized image (data URL). Anything else is ignored, never stored."""
+    return isinstance(photo, str) and bool(_PHOTO_RE.fullmatch(photo)) and len(photo) <= 120_000
+
+
+@app.post("/api/profiles")
+async def create_profile(req: Request):
+    b = await body(req)
+    inp, e = _parse_answers(b)
+    if e:
+        return e
     try:
         profile = await build_profile(inp)
-        photo = b.get("photo")
-        # Only a small, browser-resized image (data URL). Anything else is ignored, never stored.
-        if isinstance(photo, str) and re.fullmatch(r"data:image/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+", photo) and len(photo) <= 120_000:
-            profile["photo"] = photo
+        if _valid_photo(b.get("photo")):
+            profile["photo"] = b["photo"]
         await profiles.save_profile(profile)
         return {"profile": profile}
     except Exception:  # noqa: BLE001
         log.exception("build_profile failed")
         return err("Couldn't build your agent. Try again.", 500)
+
+
+@app.put("/api/profiles/{id}")
+async def update_profile(id: str, req: Request):
+    """The owner edits their answers: the agent is rebuilt from them. Same id, so dates and matches stay."""
+    old = await profiles.get_profile(id)
+    if not old:
+        return err("Not found", 404)
+    if old.get("isSeed") or viewer(req) != id:
+        return err("You can only edit your own profile", 403)
+    b = await body(req)
+    inp, e = _parse_answers(b)
+    if e:
+        return e
+    try:
+        profile = await build_profile(inp)
+    except Exception:  # noqa: BLE001
+        log.exception("build_profile (update) failed")
+        return err("Couldn't update your agent. Try again.", 500)
+    profile.update({"id": id, "createdAt": old.get("createdAt") or profile["createdAt"], "updatedAt": dates.now_ms()})
+    photo = b.get("photo", old.get("photo"))  # "" removes it; leaving the key out keeps the old one
+    if _valid_photo(photo):
+        profile["photo"] = photo
+    await profiles.save_profile(profile)
+    return {"profile": profile}
 
 
 @app.post("/api/onboard/extract")
